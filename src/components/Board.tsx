@@ -12,6 +12,7 @@ interface SongChip {
   label: string;
   x: number;
   y: number;
+  youtubeId?: string;
 }
 
 interface ViewState {
@@ -80,11 +81,11 @@ const COLOR_CYCLE: WireColor[] = [
 /* ───── Song chip positions (aligned to 40px grid) ───── */
 
 const SONGS: SongChip[] = [
-  { id: 1, label: "de(A)d ins(I)de", x: 0, y: 0 },
-  { id: 2, label: "de[AR] sinner", x: -480, y: -480 },
-  { id: 3, label: "r{IT}ual", x: 480, y: -480 },
-  { id: 4, label: "adam & /AI/ve", x: -480, y: 480 },
-  { id: 5, label: "samur<AI/> protocol", x: 480, y: 480 },
+  { id: 1, label: "de(A)d ins(I)de", x: 0, y: 0, youtubeId: "rjjLhoT9_Xw" },
+  { id: 2, label: "de[AR] sinner", x: -480, y: -480, youtubeId: "MTzqdzFzA_E" },
+  { id: 3, label: "r{IT}ual", x: 480, y: -480, youtubeId: "Rspm1K0hKEg" },
+  { id: 4, label: "adam & /AI/ve", x: -480, y: 480, youtubeId: "ABeX95R-TU4" },
+  { id: 5, label: "samur<AI/> protocol", x: 480, y: 480, youtubeId: "CoYpQHw-8eY" },
   { id: 6, label: "r<AI/>sing", x: 0, y: -480 },
   { id: 7, label: "effes", x: 0, y: 480 },
   { id: 8, label: "pizda", x: -480, y: 0 },
@@ -283,6 +284,7 @@ export default function Board() {
     songName: string;
     review: Review;
   } | null>(null);
+  const [playingChip, setPlayingChip] = useState<SongChip | null>(null);
 
   // Occupied cells (all placed nodes)
   const occupied = useMemo(() => {
@@ -503,7 +505,7 @@ export default function Board() {
     const el = containerRef.current;
     if (!el) return;
     initialized.current = true;
-    setView({ x: el.clientWidth / 2, y: el.clientHeight / 2, scale: 1.5 });
+    setView({ x: el.clientWidth / 2, y: el.clientHeight / 2, scale: 1.15 });
   }, []);
 
   useEffect(() => {
@@ -759,6 +761,7 @@ export default function Board() {
             recentlyUnlocked={recentlyUnlocked.has(song.id)}
             isBuilding={buildingFromChip === song.id}
             onClick={() => handleChipClick(song.id)}
+            onPlay={() => setPlayingChip(song)}
           />
         ))}
       </div>
@@ -797,6 +800,14 @@ export default function Board() {
           songName={viewingReview.songName}
           review={viewingReview.review}
           onClose={() => setViewingReview(null)}
+        />
+      )}
+
+      {/* YouTube player modal */}
+      {playingChip && playingChip.youtubeId && (
+        <YouTubePlayer
+          song={playingChip}
+          onClose={() => setPlayingChip(null)}
         />
       )}
     </div>
@@ -1079,12 +1090,14 @@ function Chip({
   recentlyUnlocked,
   isBuilding,
   onClick,
+  onPlay,
 }: {
   song: SongChip;
   unlocked: boolean;
   recentlyUnlocked: boolean;
   isBuilding: boolean;
   onClick: () => void;
+  onPlay: () => void;
 }) {
   const size = CHIP_SIZE;
 
@@ -1131,16 +1144,44 @@ function Chip({
         style={{ top: "25%", width: "30%", pointerEvents: "none" }}
       />
 
+      {/* Song name — under logo */}
       <span
-        className="tracking-wide font-bold"
+        className="absolute tracking-wide font-bold"
         style={{
           fontFamily: "'Barlow', sans-serif",
           fontSize: song.id === 5 ? 8 : 10,
+          top: "38%",
         }}
       >
         {song.label}
       </span>
 
+      {/* Play button — center of chip */}
+      {unlocked && song.youtubeId && (
+        <div
+          className="absolute flex items-center justify-center rounded-full animate-play-btn"
+          style={{
+            width: 30,
+            height: 30,
+            background: "#000000",
+            cursor: "pointer",
+            zIndex: 11,
+            boxShadow: "0 0 8px rgba(249,206,15,0.4)",
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onPlay();
+          }}
+        >
+          <svg width="12" height="14" viewBox="0 0 10 12" fill="none" style={{ marginLeft: 1 }}>
+            <path d="M1 1L9 6L1 11V1Z" fill="#f9ce0f" />
+          </svg>
+        </div>
+      )}
+
+      {/* Status label — bottom */}
       {!unlocked && (
         <div
           className="absolute text-[10px] text-black/40 font-semibold"
@@ -1296,6 +1337,75 @@ function ReviewViewer({
           }}
         >
           "{review.text}"
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ───── YouTube Player ───── */
+
+function YouTubePlayer({
+  song,
+  onClose,
+}: {
+  song: SongChip;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ zIndex: 1100, background: "rgba(0,0,0,0.8)" }}
+      onMouseDown={(e) => {
+        if (!(e.target as HTMLElement).closest(".yt-player-card")) onClose();
+      }}
+      onTouchStart={(e) => {
+        if (!(e.target as HTMLElement).closest(".yt-player-card")) onClose();
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div
+        className="yt-player-card review-popup-enter"
+        style={{ width: 480, maxWidth: "90vw" }}
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+      >
+        <div
+          style={{
+            fontSize: 14,
+            fontFamily: "'Barlow', sans-serif",
+            color: "#f9ce0f",
+            fontWeight: 700,
+            marginBottom: 12,
+            textAlign: "center",
+          }}
+        >
+          {song.label}
+        </div>
+        <div style={{ position: "relative", paddingBottom: "56.25%", height: 0 }}>
+          <iframe
+            src={`https://www.youtube.com/embed/${song.youtubeId}?autoplay=1`}
+            title={song.label}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              border: "none",
+              borderRadius: 8,
+            }}
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+          />
         </div>
       </div>
     </div>

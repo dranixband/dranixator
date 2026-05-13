@@ -72,3 +72,20 @@ html, body, #root {
 .animate-ctb-pulse {
   animation: ctb-pulse 1.5s ease-in-out infinite;
 }
+
+/* Play button glow pulse */
+@keyframes play-btn-glow {
+  0%, 100% { box-shadow: 0 0 4px rgba(249,206,15,0.3); transform: scale(1); }
+  50% { box-shadow: 0 0 10px rgba(249,206,15,0.5); transform: scale(1.05); }
+}
+
+.animate-play-btn {
+  animation: play-btn-glow 2s ease-in-out infinite;
+  transition: transform 0.15s ease;
+}
+
+.animate-play-btn:hover {
+  animation: none;
+  transform: scale(1.1);
+  box-shadow: 0 0 12px rgba(249,206,15,0.6);
+}
