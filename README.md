@@ -1,5 +1,7 @@
 # DRANIX // dranixator
 
+https://dranixband.github.io/dranixator/
+
 Interactive PCB-style board for **DRANIX** — a band that fuses music with IT/AI aesthetics. Each song is a microchip on the board. Listeners build connections between chips by leaving reviews, unlocking new tracks along the way.
 
 ## How it works

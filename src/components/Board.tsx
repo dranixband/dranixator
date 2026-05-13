@@ -9,12 +9,14 @@ import doorRight from "../assets/door-right.svg";
 
 type WireColor = "yellow" | "cyan" | "red" | "magenta" | "green" | "orange";
 
+export type NodeType = "text" | "audio" | "drawing" | "photo";
+
 interface SongChip {
   id: number;
   label: string;
   x: number;
   y: number;
-  youtubeId?: string;
+  audioSrc?: string;
 }
 
 interface ViewState {
@@ -23,10 +25,32 @@ interface ViewState {
   scale: number;
 }
 
-interface Review {
+interface TextReview {
+  type: "text";
   name: string;
   text: string;
 }
+
+interface AudioReview {
+  type: "audio";
+  name: string;
+  audioUrl: string;
+  durationMs: number;
+}
+
+interface DrawingReview {
+  type: "drawing";
+  name: string;
+  imageDataUrl: string;
+}
+
+interface PhotoReview {
+  type: "photo";
+  name: string;
+  imageDataUrl: string;
+}
+
+export type Review = TextReview | AudioReview | DrawingReview | PhotoReview;
 
 interface PathData {
   sourceChipId: number;
@@ -40,6 +64,16 @@ interface PendingGhost {
   x: number;
   y: number;
   unlocks?: SongChip;
+  nodeType: NodeType;
+}
+
+/** Deterministic node type from grid coordinates (checkerboard pattern) */
+function getNodeTypeForPosition(x: number, y: number): NodeType {
+  const gx = Math.round(x / GRID);
+  const gy = Math.round(y / GRID);
+  const idx = ((((gx % 4) + 4) % 4) + (((gy % 4) + 4) % 4)) % 4;
+  const types: NodeType[] = ["text", "audio", "drawing", "photo"];
+  return types[idx];
 }
 
 /* ───── Constants ───── */
@@ -83,21 +117,15 @@ const COLOR_CYCLE: WireColor[] = [
 /* ───── Song chip positions (aligned to 40px grid) ───── */
 
 const SONGS: SongChip[] = [
-  { id: 1, label: "de(A)d ins(I)de", x: 0, y: 0, youtubeId: "rjjLhoT9_Xw" },
-  { id: 2, label: "de[AR] sinner", x: -480, y: -480, youtubeId: "MTzqdzFzA_E" },
-  { id: 3, label: "r{IT}ual", x: 480, y: -480, youtubeId: "Rspm1K0hKEg" },
-  { id: 4, label: "adam & /AI/ve", x: -480, y: 480, youtubeId: "ABeX95R-TU4" },
-  {
-    id: 5,
-    label: "samur<AI/> protocol",
-    x: 480,
-    y: 480,
-    youtubeId: "CoYpQHw-8eY",
-  },
-  { id: 6, label: "r<AI/>sing", x: 0, y: -480 },
-  { id: 7, label: "effes", x: 0, y: 480 },
-  { id: 8, label: "pizda", x: -480, y: 0 },
-  { id: 9, label: "doshik", x: 480, y: 0 },
+  { id: 1, label: "de(A)d ins(I)de", x: 0, y: 0, audioSrc: "songs/dead.mp3" },
+  { id: 2, label: "de[AR] sinner", x: -480, y: -480, audioSrc: "songs/sinner.mp3" },
+  { id: 3, label: "r{IT}ual", x: 480, y: -480, audioSrc: "songs/ritual.mp3" },
+  { id: 4, label: "adam & /AI/ve", x: -480, y: 480, audioSrc: "songs/adam.mp3" },
+  { id: 5, label: "samur<AI/> protocol", x: 480, y: 480, audioSrc: "songs/samurai.mp3" },
+  { id: 6, label: "r<AI/>sing", x: 0, y: -480, audioSrc: "songs/AdultPanda.wav" },
+  { id: 7, label: "effes", x: 0, y: 480, audioSrc: "songs/effes.mp3" },
+  { id: 8, label: "pizda", x: -480, y: 0, audioSrc: "songs/Pizda.mp3" },
+  { id: 9, label: "doshik", x: 480, y: 0, audioSrc: "songs/Doshik.mp3" },
 ];
 
 /* ───── 8-direction offsets ───── */
@@ -179,6 +207,7 @@ function getGhostPositions(
   occupied: Set<string>,
   songs: SongChip[],
   unlocked: Set<number>,
+  sourceChipId?: number, // block going back into source chip zone
 ): { x: number; y: number; unlocks?: SongChip }[] {
   const lastDirIdx =
     prevX !== null && prevY !== null
@@ -186,6 +215,17 @@ function getGhostPositions(
       : -1;
 
   const ghosts: { x: number; y: number; unlocks?: SongChip }[] = [];
+
+  // Collect source chip anchor positions to block them
+  const sourceAnchors = new Set<string>();
+  if (sourceChipId !== undefined) {
+    const sourceChip = songs.find((s) => s.id === sourceChipId);
+    if (sourceChip) {
+      for (const a of getChipAnchors(sourceChip)) {
+        sourceAnchors.add(cellKey(a.x, a.y));
+      }
+    }
+  }
 
   for (let i = 0; i < DIRS.length; i++) {
     // Can't go in the exact opposite direction
@@ -196,6 +236,9 @@ function getGhostPositions(
 
     // Can't overlap existing nodes
     if (occupied.has(cellKey(nx, ny))) continue;
+
+    // Can't go back into source chip zone
+    if (sourceAnchors.has(cellKey(nx, ny))) continue;
 
     // Check if this position would unlock a chip
     const reachable = findReachableChip(nx, ny, songs, unlocked);
@@ -271,13 +314,14 @@ export default function Board() {
       ],
       reviews: [
         {
+          type: "text",
           name: "Alex",
           text: "This beat is absolutely fire, love the bass line!",
         },
-        { name: "Maria", text: "Reminds me of summer nights, beautiful vibes" },
-        { name: "DJ_K", text: "The synth work here is next level production" },
-        { name: "Luna", text: "Been playing this on repeat all week long" },
-        { name: "Max", text: "One of the best tracks I have heard this year" },
+        { type: "text", name: "Maria", text: "Reminds me of summer nights, beautiful vibes" },
+        { type: "text", name: "DJ_K", text: "The synth work here is next level production" },
+        { type: "text", name: "Luna", text: "Been playing this on repeat all week long" },
+        { type: "text", name: "Max", text: "One of the best tracks I have heard this year" },
       ],
     },
   ]);
@@ -293,6 +337,12 @@ export default function Board() {
     review: Review;
   } | null>(null);
   const [playingChip, setPlayingChip] = useState<SongChip | null>(null);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [audioProgress, setAudioProgress] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [audioVolume, setAudioVolume] = useState(0.7);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const progressIntervalRef = useRef<number>(0);
   const [skipReview, setSkipReview] = useState(false);
   const [introOpen, setIntroOpen] = useState(true);
 
@@ -323,7 +373,13 @@ export default function Board() {
       const nodes = path.nodes;
       if (nodes.length === 0) return [];
       const head = nodes[nodes.length - 1];
-      const prev = nodes.length > 1 ? nodes[nodes.length - 2] : null;
+      // When only 1 node, use source chip center as "previous" to block going back toward it
+      const sourceChip = SONGS.find((s) => s.id === path.sourceChipId);
+      const prev = nodes.length > 1
+        ? nodes[nodes.length - 2]
+        : sourceChip
+          ? { x: sourceChip.x, y: sourceChip.y }
+          : null;
       return getGhostPositions(
         head.x,
         head.y,
@@ -332,6 +388,7 @@ export default function Board() {
         occupied,
         SONGS,
         unlockedChips,
+        path.sourceChipId,
       );
     }
 
@@ -348,6 +405,94 @@ export default function Board() {
     }
     return WIRE_COLORS.yellow;
   }, [activePathIdx, buildingFromChip, paths]);
+
+  /* ── Audio Player ── */
+
+  const playAudio = useCallback((chip: SongChip) => {
+    if (!chip.audioSrc) return;
+
+    // If clicking the same chip that's already playing, toggle play/pause
+    if (playingChip?.id === chip.id && audioRef.current) {
+      if (isAudioPlaying) {
+        audioRef.current.pause();
+        setIsAudioPlaying(false);
+      } else {
+        audioRef.current.play();
+        setIsAudioPlaying(true);
+      }
+      return;
+    }
+
+    // Stop previous
+    if (audioRef.current) {
+      audioRef.current.pause();
+      clearInterval(progressIntervalRef.current);
+    }
+
+    const base = import.meta.env.BASE_URL;
+    const audio = new Audio(`${base}${chip.audioSrc}`);
+    audioRef.current = audio;
+    setPlayingChip(chip);
+    setAudioProgress(0);
+    setAudioDuration(0);
+
+    audio.onloadedmetadata = () => setAudioDuration(audio.duration);
+    audio.onended = () => {
+      setIsAudioPlaying(false);
+      setAudioProgress(audio.duration);
+      clearInterval(progressIntervalRef.current);
+    };
+
+    audio.volume = audioVolume;
+    audio.play();
+    setIsAudioPlaying(true);
+
+    progressIntervalRef.current = window.setInterval(() => {
+      if (audio) setAudioProgress(audio.currentTime);
+    }, 250);
+  }, [playingChip, isAudioPlaying, audioVolume]);
+
+  const toggleAudioPlayback = useCallback(() => {
+    if (!audioRef.current) return;
+    if (isAudioPlaying) {
+      audioRef.current.pause();
+      setIsAudioPlaying(false);
+    } else {
+      audioRef.current.play();
+      setIsAudioPlaying(true);
+    }
+  }, [isAudioPlaying]);
+
+  const seekAudio = useCallback((fraction: number) => {
+    if (!audioRef.current || !audioDuration) return;
+    audioRef.current.currentTime = fraction * audioDuration;
+    setAudioProgress(audioRef.current.currentTime);
+  }, [audioDuration]);
+
+  const changeVolume = useCallback((vol: number) => {
+    setAudioVolume(vol);
+    if (audioRef.current) audioRef.current.volume = vol;
+  }, []);
+
+  const closeAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    clearInterval(progressIntervalRef.current);
+    setPlayingChip(null);
+    setIsAudioPlaying(false);
+    setAudioProgress(0);
+    setAudioDuration(0);
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      audioRef.current?.pause();
+      clearInterval(progressIntervalRef.current);
+    };
+  }, []);
 
   /* ── Pan / Zoom ── */
 
@@ -583,7 +728,7 @@ export default function Board() {
       if (dragMoved.current) return;
       if (skipReview) {
         // Place node directly without review
-        const review: Review = { name: "dev", text: "—" };
+        const review: Review = { type: "text", name: "dev", text: "—" };
         if (buildingFromChip !== null) {
           const color = COLOR_CYCLE[paths.length % COLOR_CYCLE.length];
           const newPath: PathData = {
@@ -622,7 +767,7 @@ export default function Board() {
           }
         }
       } else {
-        setPendingGhost({ x: gx, y: gy, unlocks });
+        setPendingGhost({ x: gx, y: gy, unlocks, nodeType: getNodeTypeForPosition(gx, gy) });
       }
     },
     [skipReview, buildingFromChip, activePathIdx, paths],
@@ -644,10 +789,9 @@ export default function Board() {
 
   /* ── Review submitted → place the node ── */
   const handleReviewSubmit = useCallback(
-    (reviewName: string, reviewText: string) => {
+    (review: Review) => {
       if (!pendingGhost) return;
       const { x: gx, y: gy, unlocks } = pendingGhost;
-      const review: Review = { name: reviewName, text: reviewText };
 
       if (buildingFromChip !== null) {
         const color = COLOR_CYCLE[paths.length % COLOR_CYCLE.length];
@@ -821,6 +965,7 @@ export default function Board() {
               y={g.y}
               color={activeColor}
               unlocks={g.unlocks}
+              nodeType={getNodeTypeForPosition(g.x, g.y)}
               onClick={() => handleGhostClick(g.x, g.y, g.unlocks)}
             />
           ))}
@@ -835,7 +980,7 @@ export default function Board() {
             recentlyUnlocked={recentlyUnlocked.has(song.id)}
             isBuilding={buildingFromChip === song.id}
             onClick={() => handleChipClick(song.id)}
-            onPlay={() => setPlayingChip(song)}
+            onPlay={() => playAudio(song)}
           />
         ))}
       </div>
@@ -844,7 +989,8 @@ export default function Board() {
       {pendingGhost && (
         <ReviewPopup
           songName={pendingSongName}
-          onSubmit={handleReviewSubmit}
+          nodeType={pendingGhost.nodeType}
+          onSubmit={(review: Review) => handleReviewSubmit(review)}
           onClose={() => setPendingGhost(null)}
         />
       )}
@@ -945,7 +1091,7 @@ export default function Board() {
       >
         {/* TODO create a better conceptual text */}
         <div>drag to navigate // scroll to zoom</div>
-        <div>click a chip → build path → write review</div>
+        <div>click a chip → build path → leave a node</div>
         <div>
           connect all chips to un/L0CK/ the board and r{`[AI]`}se DRANIX
         </div>
@@ -960,11 +1106,18 @@ export default function Board() {
         />
       )}
 
-      {/* YouTube player modal */}
-      {playingChip && playingChip.youtubeId && (
-        <YouTubePlayer
+      {/* Bottom audio player bar */}
+      {playingChip && (
+        <AudioPlayerBar
           song={playingChip}
-          onClose={() => setPlayingChip(null)}
+          isPlaying={isAudioPlaying}
+          progress={audioProgress}
+          duration={audioDuration}
+          volume={audioVolume}
+          onToggle={toggleAudioPlayback}
+          onSeek={seekAudio}
+          onVolumeChange={changeVolume}
+          onClose={closeAudio}
         />
       )}
     </div>
@@ -1063,6 +1216,7 @@ function PathSVG({
       {nodes.map((n, i) => {
         const isHead = i === nodes.length - 1 && !isComplete;
         const hasReview = !!path.reviews[i];
+        const reviewType = path.reviews[i]?.type;
         return (
           <g key={i} className="node-group">
             {/* Hover ring — hidden by default, shown on hover */}
@@ -1084,6 +1238,31 @@ function PathSVG({
               fill={color}
               filter={`url(#glow-${path.color})`}
             />
+            {/* Type indicator icons */}
+            {reviewType === "audio" && (
+              <g opacity={0.85}>
+                {/* 3 waveform bars */}
+                <rect x={n.x - 3} y={n.y - 2} width={1.5} height={4} rx={0.5} fill="#000" />
+                <rect x={n.x - 0.75} y={n.y - 3.5} width={1.5} height={7} rx={0.5} fill="#000" />
+                <rect x={n.x + 1.5} y={n.y - 1.5} width={1.5} height={3} rx={0.5} fill="#000" />
+              </g>
+            )}
+            {reviewType === "drawing" && (
+              <g opacity={0.85}>
+                {/* 2x2 pixel grid */}
+                <rect x={n.x - 2.5} y={n.y - 2.5} width={2} height={2} fill="#000" />
+                <rect x={n.x + 0.5} y={n.y - 2.5} width={2} height={2} fill="#000" opacity={0.5} />
+                <rect x={n.x - 2.5} y={n.y + 0.5} width={2} height={2} fill="#000" opacity={0.5} />
+                <rect x={n.x + 0.5} y={n.y + 0.5} width={2} height={2} fill="#000" />
+              </g>
+            )}
+            {reviewType === "photo" && (
+              <g opacity={0.85}>
+                {/* Tiny camera/frame icon */}
+                <rect x={n.x - 3} y={n.y - 2} width={6} height={4} rx={0.5} fill="none" stroke="#000" strokeWidth={0.8} />
+                <circle cx={n.x} cy={n.y} r={1.2} fill="#000" />
+              </g>
+            )}
             {/* Clickable hit area for every node */}
             <circle
               cx={n.x}
@@ -1144,12 +1323,14 @@ function GhostNode({
   y,
   color,
   unlocks,
+  nodeType,
   onClick,
 }: {
   x: number;
   y: number;
   color: string;
   unlocks?: SongChip;
+  nodeType: NodeType;
   onClick: () => void;
 }) {
   return (
@@ -1173,33 +1354,61 @@ function GhostNode({
       <circle
         cx={x}
         cy={y}
-        r={6}
+        r={9}
         fill={color}
-        opacity={0.25}
+        opacity={0.3}
         style={{ pointerEvents: "none" }}
       >
         <animate
           attributeName="opacity"
-          values="0.25;0.5;0.25"
+          values="0.3;0.55;0.3"
           dur="1.5s"
           repeatCount="indefinite"
         />
       </circle>
 
+      {/* Type hint icon */}
+      <g opacity={0.7} style={{ pointerEvents: "none" }}>
+        {nodeType === "text" && (
+          <text x={x} y={y + 3} textAnchor="middle" fontSize={10} fill={color} fontFamily="monospace" fontWeight="bold">T</text>
+        )}
+        {nodeType === "audio" && (
+          <>
+            <rect x={x - 4} y={y - 2.5} width={2} height={5} rx={0.5} fill={color} />
+            <rect x={x - 1} y={y - 4.5} width={2} height={9} rx={0.5} fill={color} />
+            <rect x={x + 2} y={y - 1.5} width={2} height={3} rx={0.5} fill={color} />
+          </>
+        )}
+        {nodeType === "drawing" && (
+          <>
+            <rect x={x - 3.5} y={y - 3.5} width={3} height={3} fill={color} />
+            <rect x={x + 0.5} y={y - 3.5} width={3} height={3} fill={color} opacity={0.5} />
+            <rect x={x - 3.5} y={y + 0.5} width={3} height={3} fill={color} opacity={0.5} />
+            <rect x={x + 0.5} y={y + 0.5} width={3} height={3} fill={color} />
+          </>
+        )}
+        {nodeType === "photo" && (
+          <>
+            <rect x={x - 4.5} y={y - 3} width={9} height={6} rx={1} fill="none" stroke={color} strokeWidth={1} />
+            <circle cx={x} cy={y} r={2} fill={color} />
+          </>
+        )}
+      </g>
+
       {/* Outer pulsing ring */}
       <circle
         cx={x}
         cy={y}
-        r={10}
+        r={13}
         fill="none"
         stroke={color}
         strokeWidth={1.5}
-        opacity={0.4}
+        opacity={0.45}
         style={{ pointerEvents: "none" }}
       >
         <animate
           attributeName="r"
-          values="10;15;10"
+          values="13;17;13"
           dur="1.5s"
           repeatCount="indefinite"
         />
@@ -1314,7 +1523,7 @@ function Chip({
       </span>
 
       {/* Play button — center of chip */}
-      {unlocked && song.youtubeId && (
+      {unlocked && song.audioSrc && (
         <div
           className="absolute flex items-center justify-center play-btn"
           style={{
@@ -1404,7 +1613,7 @@ function getChipEdgePoint(
   return getChipAnchors(chip)[idx];
 }
 
-/* ───── Review Viewer (read-only) ───── */
+/* ───── Review Viewer (read-only, multi-type) ───── */
 
 function ReviewViewer({
   songName,
@@ -1415,13 +1624,43 @@ function ReviewViewer({
   review: Review;
   onClose: () => void;
 }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    return () => {
+      window.removeEventListener("keydown", handler);
+      audioRef.current?.pause();
+    };
   }, [onClose]);
+
+  const toggleAudio = () => {
+    if (review.type !== "audio") return;
+    if (isPlaying && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsPlaying(false);
+    } else {
+      const audio = new Audio(review.audioUrl);
+      audioRef.current = audio;
+      audio.onended = () => setIsPlaying(false);
+      audio.play();
+      setIsPlaying(true);
+    }
+  };
+
+  const typeLabel =
+    review.type === "text"
+      ? "Review"
+      : review.type === "audio"
+        ? "Voice note"
+        : review.type === "drawing"
+          ? "Pixel art"
+          : "Photo";
 
   return (
     <div
@@ -1461,7 +1700,7 @@ function ReviewViewer({
               marginBottom: 4,
             }}
           >
-            Review
+            {typeLabel}
           </div>
           <div
             style={{
@@ -1487,92 +1726,385 @@ function ReviewViewer({
           — {review.name}
         </div>
 
-        {/* Review text */}
-        <div
-          style={{
-            fontSize: 14,
-            fontFamily: "monospace",
-            color: "#d0d0d0",
-            lineHeight: 1.6,
-            padding: "12px 14px",
-            background: "rgba(0,0,0,0.25)",
-            border: "1px solid rgba(34,197,94,0.1)",
-            borderRadius: 8,
-          }}
-        >
-          "{review.text}"
-        </div>
+        {/* Content by type */}
+        {review.type === "text" && (
+          <div
+            style={{
+              fontSize: 14,
+              fontFamily: "monospace",
+              color: "#d0d0d0",
+              lineHeight: 1.6,
+              padding: "12px 14px",
+              background: "rgba(0,0,0,0.25)",
+              border: "1px solid rgba(34,197,94,0.1)",
+              borderRadius: 8,
+            }}
+          >
+            "{review.text}"
+          </div>
+        )}
+
+        {review.type === "audio" && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "14px 16px",
+              background: "rgba(0,0,0,0.25)",
+              border: "1px solid rgba(34,197,94,0.1)",
+              borderRadius: 8,
+            }}
+          >
+            <button
+              onClick={toggleAudio}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: "50%",
+                background: isPlaying
+                  ? "rgba(34,197,94,0.2)"
+                  : "rgba(245,197,66,0.15)",
+                border: `1px solid ${isPlaying ? "rgba(34,197,94,0.4)" : "rgba(245,197,66,0.3)"}`,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              {isPlaying ? (
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 14 14"
+                  fill="#22c55e"
+                >
+                  <rect x="1" y="1" width="4" height="12" rx="1" />
+                  <rect x="9" y="1" width="4" height="12" rx="1" />
+                </svg>
+              ) : (
+                <svg
+                  width="14"
+                  height="16"
+                  viewBox="0 0 14 16"
+                  fill="#f5c542"
+                >
+                  <path d="M2 1L12 8L2 15V1Z" />
+                </svg>
+              )}
+            </button>
+            <div>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontFamily: "monospace",
+                  color: isPlaying ? "#22c55e" : "#d0d0d0",
+                }}
+              >
+                {isPlaying ? "Playing..." : "Voice message"}
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontFamily: "monospace",
+                  color: "rgba(255,255,255,0.3)",
+                  marginTop: 2,
+                }}
+              >
+                {(review.durationMs / 1000).toFixed(1)}s
+              </div>
+            </div>
+          </div>
+        )}
+
+        {review.type === "drawing" && (
+          <div style={{ textAlign: "center" }}>
+            <img
+              src={review.imageDataUrl}
+              alt="Pixel art"
+              style={{
+                width: 256,
+                height: 256,
+                imageRendering: "pixelated",
+                borderRadius: 8,
+                border: "1px solid rgba(34,197,94,0.15)",
+                background: "#0a0a0a",
+              }}
+            />
+          </div>
+        )}
+
+        {review.type === "photo" && (
+          <div style={{ textAlign: "center" }}>
+            <img
+              src={review.imageDataUrl}
+              alt="Photo"
+              style={{
+                maxWidth: "100%",
+                maxHeight: 260,
+                borderRadius: 8,
+                border: "1px solid rgba(34,197,94,0.15)",
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-/* ───── YouTube Player ───── */
+/* ───── Audio Player Bar (fixed bottom) ───── */
 
-function YouTubePlayer({
+function AudioPlayerBar({
   song,
+  isPlaying,
+  progress,
+  duration,
+  volume,
+  onToggle,
+  onSeek,
+  onVolumeChange,
   onClose,
 }: {
   song: SongChip;
+  isPlaying: boolean;
+  progress: number;
+  duration: number;
+  volume: number;
+  onToggle: () => void;
+  onSeek: (fraction: number) => void;
+  onVolumeChange: (vol: number) => void;
   onClose: () => void;
 }) {
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+  const barRef = useRef<HTMLDivElement>(null);
+  const volRef = useRef<HTMLDivElement>(null);
+
+  const fmt = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
+
+  const handleSeek = (e: React.MouseEvent) => {
+    const bar = barRef.current;
+    if (!bar) return;
+    const rect = bar.getBoundingClientRect();
+    const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    onSeek(fraction);
+  };
+
+  const volFractionFromEvent = (e: MouseEvent | React.MouseEvent) => {
+    const bar = volRef.current;
+    if (!bar) return null;
+    const rect = bar.getBoundingClientRect();
+    return Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  };
+
+  const handleVolMouseDown = (e: React.MouseEvent) => {
+    const f = volFractionFromEvent(e);
+    if (f !== null) onVolumeChange(f);
+
+    const onMove = (ev: MouseEvent) => {
+      const fr = volFractionFromEvent(ev);
+      if (fr !== null) onVolumeChange(fr);
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
+  const pct = duration > 0 ? (progress / duration) * 100 : 0;
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center"
-      style={{ zIndex: 1100, background: "rgba(0,0,0,0.8)" }}
-      onMouseDown={(e) => {
-        if (!(e.target as HTMLElement).closest(".yt-player-card")) onClose();
+      className="fixed"
+      style={{
+        bottom: 16,
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: "30%",
+        minWidth: 280,
+        zIndex: 1100,
+        background: "rgba(0,0,0,0.55)",
+        border: "1px solid rgba(249,206,15,0.15)",
+        borderRadius: 12,
+        padding: "10px 14px",
+        backdropFilter: "blur(16px)",
       }}
-      onTouchStart={(e) => {
-        if (!(e.target as HTMLElement).closest(".yt-player-card")) onClose();
-      }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
+      {/* Progress bar — full width, clickable */}
       <div
-        className="yt-player-card review-popup-enter"
-        style={{ width: 960, maxWidth: "90vw" }}
-        onMouseDown={(e) => e.stopPropagation()}
-        onTouchStart={(e) => e.stopPropagation()}
+        ref={barRef}
+        onClick={handleSeek}
+        style={{
+          width: "100%",
+          height: 3,
+          background: "rgba(255,255,255,0.1)",
+          cursor: "pointer",
+          marginBottom: 10,
+          position: "relative",
+        }}
       >
         <div
           style={{
-            fontSize: 14,
-            fontFamily: "'Barlow', sans-serif",
+            width: `${pct}%`,
+            height: "100%",
+            background: "#f9ce0f",
+            borderRadius: 1,
+            transition: "width 0.15s linear",
+          }}
+        />
+        {/* Seek dot */}
+        <div
+          style={{
+            position: "absolute",
+            left: `${pct}%`,
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            background: "#f9ce0f",
+            boxShadow: "0 0 6px rgba(249,206,15,0.5)",
+          }}
+        />
+      </div>
+
+      {/* Controls row */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+        }}
+      >
+        {/* Play/Pause */}
+        <button
+          onClick={onToggle}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            background: "rgba(249,206,15,0.1)",
+            border: "1px solid rgba(249,206,15,0.3)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            transition: "all 0.15s",
+          }}
+        >
+          {isPlaying ? (
+            <svg width="12" height="14" viewBox="0 0 12 14" fill="#f9ce0f">
+              <rect x="0" y="0" width="4" height="14" rx="1" />
+              <rect x="8" y="0" width="4" height="14" rx="1" />
+            </svg>
+          ) : (
+            <svg width="12" height="14" viewBox="0 0 12 14" fill="#f9ce0f">
+              <path d="M1 0.5L11 7L1 13.5V0.5Z" />
+            </svg>
+          )}
+        </button>
+
+        {/* Song label */}
+        <div
+          style={{
+            flex: 1,
+            fontFamily: "monospace",
+            fontSize: 13,
             color: "#f9ce0f",
             fontWeight: 700,
-            marginBottom: 12,
-            textAlign: "center",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
           }}
         >
           {song.label}
         </div>
+
+        {/* Time */}
         <div
-          style={{ position: "relative", paddingBottom: "56.25%", height: 0 }}
+          style={{
+            fontFamily: "monospace",
+            fontSize: 11,
+            color: "rgba(255,255,255,0.4)",
+            flexShrink: 0,
+          }}
         >
-          <iframe
-            src={`https://www.youtube.com/embed/${song.youtubeId}?autoplay=1`}
-            title={song.label}
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              border: "none",
-              borderRadius: 8,
-            }}
-            allow="autoplay; encrypted-media"
-            allowFullScreen
-          />
+          {fmt(progress)} / {fmt(duration)}
         </div>
+
+        {/* Volume */}
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="rgba(255,255,255,0.35)">
+            <path d="M2 5.5h2.5L8 2v12L4.5 10.5H2a1 1 0 01-1-1v-3a1 1 0 011-1z" />
+            {volume > 0.01 && <path d="M10 5.5a3.5 3.5 0 010 5" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.3" />}
+            {volume > 0.5 && <path d="M11.5 3.5a6 6 0 010 9" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.3" />}
+          </svg>
+          <div
+            ref={volRef}
+            onMouseDown={handleVolMouseDown}
+            style={{
+              width: 50,
+              height: 3,
+              background: "rgba(255,255,255,0.1)",
+              borderRadius: 2,
+              cursor: "pointer",
+              position: "relative",
+            }}
+          >
+            <div
+              style={{
+                width: `${volume * 100}%`,
+                height: "100%",
+                background: "rgba(255,255,255,0.4)",
+                borderRadius: 2,
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                left: `${volume * 100}%`,
+                top: "50%",
+                transform: "translate(-50%, -50%)",
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "rgba(255,255,255,0.6)",
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Close */}
+        <button
+          onClick={onClose}
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 4,
+            background: "transparent",
+            border: "1px solid rgba(255,255,255,0.1)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            color: "rgba(255,255,255,0.4)",
+            fontSize: 16,
+            lineHeight: 1,
+          }}
+        >
+          &times;
+        </button>
       </div>
     </div>
   );
