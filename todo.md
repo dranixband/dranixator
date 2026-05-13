@@ -5,5 +5,5 @@
 5. Add fancy start animation. Like curtains open. or some animation dive deep into schema. Or Ai video
 6. Button to submithub links
 7. Add a check of 30 second listen to add a review
-8. Add some stats. Maybe amount of active ships. Amount of added nodes
+8. Добавить в стату лайки
 

@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="1000" viewBox="0 0 600 1000">
+  <defs>
+    <linearGradient id="metal" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0%" stop-color="#8a8a8a"/>
+      <stop offset="30%" stop-color="#a0a0a0"/>
+      <stop offset="70%" stop-color="#909090"/>
+      <stop offset="100%" stop-color="#a8a8a8"/>
+    </linearGradient>
+    <linearGradient id="groove" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#666"/>
+      <stop offset="50%" stop-color="#bbb"/>
+      <stop offset="100%" stop-color="#666"/>
+    </linearGradient>
+    <linearGradient id="edgeHighlight" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="rgba(249,206,15,0.15)"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Base metal -->
+  <rect width="600" height="1000" fill="url(#metal)"/>
+
+  <!-- Subtle vertical brushed texture -->
+  <g opacity="0.04">
+    <line x1="50" y1="0" x2="50" y2="1000" stroke="#fff" stroke-width="0.5"/>
+    <line x1="120" y1="0" x2="120" y2="1000" stroke="#fff" stroke-width="0.3"/>
+    <line x1="200" y1="0" x2="200" y2="1000" stroke="#fff" stroke-width="0.5"/>
+    <line x1="280" y1="0" x2="280" y2="1000" stroke="#fff" stroke-width="0.3"/>
+    <line x1="350" y1="0" x2="350" y2="1000" stroke="#fff" stroke-width="0.5"/>
+    <line x1="430" y1="0" x2="430" y2="1000" stroke="#fff" stroke-width="0.3"/>
+    <line x1="500" y1="0" x2="500" y2="1000" stroke="#fff" stroke-width="0.5"/>
+    <line x1="560" y1="0" x2="560" y2="1000" stroke="#fff" stroke-width="0.3"/>
+  </g>
+
+  <!-- Horizontal panel grooves -->
+  <rect x="20" y="80" width="560" height="2" fill="url(#groove)" rx="1"/>
+  <rect x="20" y="82" width="560" height="1" fill="rgba(255,255,255,0.03)"/>
+
+  <rect x="20" y="250" width="560" height="2" fill="url(#groove)" rx="1"/>
+  <rect x="20" y="252" width="560" height="1" fill="rgba(255,255,255,0.03)"/>
+
+  <rect x="20" y="500" width="560" height="2" fill="url(#groove)" rx="1"/>
+  <rect x="20" y="502" width="560" height="1" fill="rgba(255,255,255,0.03)"/>
+
+  <rect x="20" y="750" width="560" height="2" fill="url(#groove)" rx="1"/>
+  <rect x="20" y="752" width="560" height="1" fill="rgba(255,255,255,0.03)"/>
+
+  <rect x="20" y="920" width="560" height="2" fill="url(#groove)" rx="1"/>
+  <rect x="20" y="922" width="560" height="1" fill="rgba(255,255,255,0.03)"/>
+
+  <!-- Rivets / bolts -->
+  <g fill="#c0c0c0" stroke="#888" stroke-width="1">
+    <circle cx="40" cy="40" r="6"/><circle cx="40" cy="40" r="3" fill="#aaa"/>
+    <circle cx="560" cy="40" r="6"/><circle cx="560" cy="40" r="3" fill="#aaa"/>
+    <circle cx="40" cy="960" r="6"/><circle cx="40" cy="960" r="3" fill="#aaa"/>
+    <circle cx="560" cy="960" r="6"/><circle cx="560" cy="960" r="3" fill="#aaa"/>
+    <circle cx="40" cy="500" r="6"/><circle cx="40" cy="500" r="3" fill="#aaa"/>
+    <circle cx="560" cy="500" r="6"/><circle cx="560" cy="500" r="3" fill="#aaa"/>
+  </g>
+
+  <!-- Edge frame -->
+  <rect x="8" y="8" width="584" height="984" rx="4" fill="none" stroke="#bbb" stroke-width="1.5"/>
+  <rect x="12" y="12" width="576" height="976" rx="3" fill="none" stroke="#777" stroke-width="1"/>
+
+  <!-- Left edge highlight (door seam side) -->
+  <rect x="0" y="0" width="20" height="1000" fill="url(#edgeHighlight)"/>
+
+  <!-- Hazard stripes (bottom) -->
+  <g opacity="0.12">
+    <rect x="30" y="930" width="540" height="30" fill="#000"/>
+    <line x1="30" y1="960" x2="60" y2="930" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="60" y1="960" x2="90" y2="930" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="90" y1="960" x2="120" y2="930" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="120" y1="960" x2="150" y2="930" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="150" y1="960" x2="180" y2="930" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="180" y1="960" x2="210" y2="930" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="210" y1="960" x2="240" y2="930" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="240" y1="960" x2="270" y2="930" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="270" y1="960" x2="300" y2="930" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="300" y1="960" x2="330" y2="930" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="330" y1="960" x2="360" y2="930" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="360" y1="960" x2="390" y2="930" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="390" y1="960" x2="420" y2="930" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="420" y1="960" x2="450" y2="930" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="450" y1="960" x2="480" y2="930" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="480" y1="960" x2="510" y2="930" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="510" y1="960" x2="540" y2="930" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="540" y1="960" x2="570" y2="930" stroke="#f9ce0f" stroke-width="8"/>
+  </g>
+
+  <!-- Hazard stripes (top) -->
+  <g opacity="0.12">
+    <rect x="30" y="10" width="540" height="30" fill="#000"/>
+    <line x1="30" y1="40" x2="60" y2="10" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="60" y1="40" x2="90" y2="10" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="90" y1="40" x2="120" y2="10" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="120" y1="40" x2="150" y2="10" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="150" y1="40" x2="180" y2="10" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="180" y1="40" x2="210" y2="10" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="210" y1="40" x2="240" y2="10" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="240" y1="40" x2="270" y2="10" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="270" y1="40" x2="300" y2="10" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="300" y1="40" x2="330" y2="10" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="330" y1="40" x2="360" y2="10" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="360" y1="40" x2="390" y2="10" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="390" y1="40" x2="420" y2="10" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="420" y1="40" x2="450" y2="10" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="450" y1="40" x2="480" y2="10" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="480" y1="40" x2="510" y2="10" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="510" y1="40" x2="540" y2="10" stroke="#f9ce0f" stroke-width="8"/>
+    <line x1="540" y1="40" x2="570" y2="10" stroke="#f9ce0f" stroke-width="8"/>
+  </g>
+
+  <!-- Tech labels -->
+  <g opacity="0.15" font-family="monospace" font-size="10" fill="#f9ce0f">
+    <text x="560" y="110" text-anchor="end">GATE: ALPHA-09</text>
+    <text x="560" y="125" text-anchor="end">STATUS: ENGAGED</text>
+  </g>
+
+  <g opacity="0.15" font-family="monospace" font-size="10" fill="#f9ce0f">
+    <text x="560" y="270" text-anchor="end">PANEL_R :: UNIT.08</text>
+  </g>
+
+  <!-- Center emblem area -->
+  <g opacity="0.08">
+    <rect x="150" y="420" width="300" height="160" rx="6" fill="none" stroke="#f9ce0f" stroke-width="1"/>
+    <rect x="155" y="425" width="290" height="150" rx="4" fill="none" stroke="#f9ce0f" stroke-width="0.5" stroke-dasharray="4 4"/>
+  </g>
+  <text x="300" y="508" text-anchor="middle" font-family="'Barlow', sans-serif" font-size="32" font-weight="700" fill="#f9ce0f" opacity="0.5" letter-spacing="8">DRANIX</text>
+
+  <!-- Small circuit traces (mirrored) -->
+  <g stroke="#f9ce0f" stroke-width="0.5" opacity="0.06" fill="none">
+    <path d="M560 600 L500 600 L480 620 L400 620"/>
+    <path d="M560 640 L520 640 L500 660 L420 660 L400 640 L320 640"/>
+    <path d="M560 700 L540 700 L520 720 L440 720"/>
+    <circle cx="400" cy="620" r="3"/>
+    <circle cx="320" cy="640" r="3"/>
+    <circle cx="440" cy="720" r="3"/>
+  </g>
+</svg>

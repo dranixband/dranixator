@@ -2,6 +2,8 @@ import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import ReviewPopup from "./ReviewPopup";
 import chipImg from "../assets/Chip.jpg";
 import dranixLogo from "../assets/Dranix logo.svg";
+import doorLeft from "../assets/door-left.svg";
+import doorRight from "../assets/door-right.svg";
 
 /* ───── Types ───── */
 
@@ -292,6 +294,7 @@ export default function Board() {
   } | null>(null);
   const [playingChip, setPlayingChip] = useState<SongChip | null>(null);
   const [skipReview, setSkipReview] = useState(false);
+  const [introOpen, setIntroOpen] = useState(true);
 
   // Occupied cells (all placed nodes)
   const occupied = useMemo(() => {
@@ -512,7 +515,29 @@ export default function Board() {
     const el = containerRef.current;
     if (!el) return;
     initialized.current = true;
-    setView({ x: el.clientWidth / 2, y: el.clientHeight / 2, scale: 1.15 });
+
+    const cx = el.clientWidth / 2;
+    const cy = el.clientHeight / 2;
+    const startScale = 5;
+    const endScale = 1.15;
+    const duration = 1400;
+    const start = performance.now();
+
+    setView({ x: cx, y: cy, scale: startScale });
+
+    // Start panels opening
+    setTimeout(() => setIntroOpen(false), 300);
+
+    const animate = (now: number) => {
+      const elapsed = now - start;
+      const t = Math.min(elapsed / duration, 1);
+      // ease-out cubic
+      const ease = 1 - Math.pow(1 - t, 3);
+      const scale = startScale + (endScale - startScale) * ease;
+      setView({ x: cx, y: cy, scale });
+      if (t < 1) requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
   }, []);
 
   useEffect(() => {
@@ -824,6 +849,28 @@ export default function Board() {
         />
       )}
 
+      {/* Intro panels */}
+      <div
+        className="fixed inset-y-0 left-0 pointer-events-none"
+        style={{
+          width: "50%",
+          background: `#000 url(${doorLeft}) center/cover no-repeat`,
+          zIndex: 200,
+          transform: introOpen ? "translateX(0)" : "translateX(-100%)",
+          transition: "transform 1.2s cubic-bezier(0.65, 0, 0.35, 1)",
+        }}
+      />
+      <div
+        className="fixed inset-y-0 right-0 pointer-events-none"
+        style={{
+          width: "50%",
+          background: `#000 url(${doorRight}) center/cover no-repeat`,
+          zIndex: 200,
+          transform: introOpen ? "translateX(0)" : "translateX(100%)",
+          transition: "transform 1.2s cubic-bezier(0.65, 0, 0.35, 1)",
+        }}
+      />
+
       {/* Dev Tools */}
       <div
         className="fixed top-4 left-4"
@@ -866,12 +913,31 @@ export default function Board() {
         </label>
       </div>
 
+      {/* Stats */}
+      <div
+        className="fixed top-4 right-4 pointer-events-none"
+        style={{
+          zIndex: 100,
+          fontFamily: "monospace",
+          fontSize: 10,
+          color: "rgba(249,206,15,0.5)",
+          textAlign: "right",
+          lineHeight: 1.8,
+          letterSpacing: 0.5,
+        }}
+      >
+        <div>CHIPS_ACTIVE: {unlockedChips.size}/{SONGS.length}</div>
+        <div>PATHS_BUILT: {paths.length}</div>
+        <div>NODES_TOTAL: {paths.reduce((sum, p) => sum + p.nodes.length, 0)}</div>
+<div>BOARD_STATUS: {unlockedChips.size === SONGS.length ? "COMPLETE" : `${Math.round((unlockedChips.size / SONGS.length) * 100)}%`}</div>
+      </div>
+
       {/* Legend */}
       <div
-        className="fixed bottom-8 right-18 text-white/30 pointer-events-none"
+        className="fixed bottom-4 right-4 text-white/30 pointer-events-none"
         style={{
           fontFamily: "'Barlow', sans-serif",
-          fontSize: 10,
+          fontSize: 12,
           lineHeight: 1.6,
           textAlign: "right",
           zIndex: 50,
