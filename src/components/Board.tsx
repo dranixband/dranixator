@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
+import lottie from "lottie-web";
 import ReviewPopup from "./ReviewPopup";
 import chipImg from "../assets/Chip.jpg";
 import dranixLogo from "../assets/Dranix logo.svg";
@@ -345,6 +346,31 @@ export default function Board() {
   const progressIntervalRef = useRef<number>(0);
   const [skipReview, setSkipReview] = useState(false);
   const [introOpen, setIntroOpen] = useState(true);
+
+  // Reactions: per-chip selected reaction for current user + total counts
+  const [chipReactions, setChipReactions] = useState<
+    Record<number, { selected: string | null; counts: Record<string, number> }>
+  >({});
+
+  const handleReaction = useCallback((chipId: number, reactionId: string) => {
+    setChipReactions((prev) => {
+      const chip = prev[chipId] ?? { selected: null, counts: {} };
+      const counts = { ...chip.counts };
+
+      // Remove previous selection
+      if (chip.selected) {
+        counts[chip.selected] = Math.max(0, (counts[chip.selected] ?? 0) - 1);
+      }
+
+      // Toggle: if same reaction clicked again, just deselect
+      const newSelected = chip.selected === reactionId ? null : reactionId;
+      if (newSelected) {
+        counts[newSelected] = (counts[newSelected] ?? 0) + 1;
+      }
+
+      return { ...prev, [chipId]: { selected: newSelected, counts } };
+    });
+  }, []);
 
   // Occupied cells (all placed nodes)
   const occupied = useMemo(() => {
@@ -981,6 +1007,9 @@ export default function Board() {
             isBuilding={buildingFromChip === song.id}
             onClick={() => handleChipClick(song.id)}
             onPlay={() => playAudio(song)}
+            selectedReaction={chipReactions[song.id]?.selected ?? null}
+            reactionCounts={chipReactions[song.id]?.counts ?? {}}
+            onReaction={(reactionId) => handleReaction(song.id, reactionId)}
           />
         ))}
       </div>
@@ -1448,6 +1477,88 @@ function GhostNode({
   );
 }
 
+/* ───── Lottie Reaction Button ───── */
+
+function LottieReaction({
+  path,
+  flip,
+  count,
+  active,
+  onReact,
+}: {
+  id: string;
+  path: string;
+  flip?: boolean;
+  count: number;
+  active: boolean;
+  onReact: () => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const animRef = useRef<ReturnType<typeof lottie.loadAnimation> | null>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const base = import.meta.env.BASE_URL;
+    const anim = lottie.loadAnimation({
+      container: containerRef.current,
+      renderer: "svg",
+      loop: false,
+      autoplay: false,
+      path: `${base}${path}`,
+    });
+    animRef.current = anim;
+    return () => anim.destroy();
+  }, [path]);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!active) {
+      animRef.current?.goToAndPlay(0, true);
+    }
+    onReact();
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 1,
+        padding: "1px 3px",
+        background: active ? "rgba(249,206,15,0.12)" : "rgba(0,0,0,0.5)",
+        border: active ? "1px solid rgba(249,206,15,0.25)" : "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 8,
+        cursor: "pointer",
+        transition: "all 0.2s",
+      }}
+    >
+      <div
+        ref={containerRef}
+        style={{
+          width: 14,
+          height: 14,
+          transform: flip ? "scaleY(-1)" : "none",
+        }}
+      />
+      {count > 0 && (
+        <span
+          style={{
+            fontSize: 8,
+            fontFamily: "monospace",
+            color: active ? "#f9ce0f" : "rgba(255,255,255,0.4)",
+            fontWeight: 700,
+          }}
+        >
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
 /* ───── Chip Component ───── */
 
 function Chip({
@@ -1457,6 +1568,9 @@ function Chip({
   isBuilding,
   onClick,
   onPlay,
+  selectedReaction,
+  reactionCounts,
+  onReaction,
 }: {
   song: SongChip;
   unlocked: boolean;
@@ -1464,6 +1578,9 @@ function Chip({
   isBuilding: boolean;
   onClick: () => void;
   onPlay: () => void;
+  selectedReaction: string | null;
+  reactionCounts: Record<string, number>;
+  onReaction: (reactionId: string) => void;
 }) {
   const size = CHIP_SIZE;
 
@@ -1570,6 +1687,42 @@ function Chip({
           style={{ bottom: "28%", fontFamily: "'Barlow', sans-serif" }}
         >
           CLICK TO BUILD
+        </div>
+      )}
+
+      {/* Reaction row under chip */}
+      {unlocked && (
+        <div
+          className="absolute"
+          style={{
+            bottom: -20,
+            left: "50%",
+            transform: "translateX(-50%)",
+            display: "flex",
+            gap: 2,
+            zIndex: 12,
+          }}
+        >
+          {[
+            { id: "like", path: "lottie/like.json" },
+
+            { id: "honka", path: "lottie/Honka.json" },
+            { id: "nails", path: "lottie/Nails.json" },
+            { id: "poop", path: "lottie/Poop.json" },
+            { id: "pepeglasses", path: "lottie/pepeglasses.json" },
+            { id: "pepehug", path: "lottie/pepeHug.json" },
+            { id: "pepemusic", path: "lottie/pepeMusic.json" },
+          ].map((r) => (
+            <LottieReaction
+              key={r.id}
+              id={r.id}
+              path={r.path}
+              flip={r.flip}
+              count={reactionCounts[r.id] ?? 0}
+              active={selectedReaction === r.id}
+              onReact={() => onReaction(r.id)}
+            />
+          ))}
         </div>
       )}
     </div>
