@@ -85,7 +85,13 @@ const SONGS: SongChip[] = [
   { id: 2, label: "de[AR] sinner", x: -480, y: -480, youtubeId: "MTzqdzFzA_E" },
   { id: 3, label: "r{IT}ual", x: 480, y: -480, youtubeId: "Rspm1K0hKEg" },
   { id: 4, label: "adam & /AI/ve", x: -480, y: 480, youtubeId: "ABeX95R-TU4" },
-  { id: 5, label: "samur<AI/> protocol", x: 480, y: 480, youtubeId: "CoYpQHw-8eY" },
+  {
+    id: 5,
+    label: "samur<AI/> protocol",
+    x: 480,
+    y: 480,
+    youtubeId: "CoYpQHw-8eY",
+  },
   { id: 6, label: "r<AI/>sing", x: 0, y: -480 },
   { id: 7, label: "effes", x: 0, y: 480 },
   { id: 8, label: "pizda", x: -480, y: 0 },
@@ -285,6 +291,7 @@ export default function Board() {
     review: Review;
   } | null>(null);
   const [playingChip, setPlayingChip] = useState<SongChip | null>(null);
+  const [skipReview, setSkipReview] = useState(false);
 
   // Occupied cells (all placed nodes)
   const occupied = useMemo(() => {
@@ -549,9 +556,51 @@ export default function Board() {
   const handleGhostClick = useCallback(
     (gx: number, gy: number, unlocks?: SongChip) => {
       if (dragMoved.current) return;
-      setPendingGhost({ x: gx, y: gy, unlocks });
+      if (skipReview) {
+        // Place node directly without review
+        const review: Review = { name: "dev", text: "—" };
+        if (buildingFromChip !== null) {
+          const color = COLOR_CYCLE[paths.length % COLOR_CYCLE.length];
+          const newPath: PathData = {
+            sourceChipId: buildingFromChip,
+            nodes: [{ x: gx, y: gy }],
+            color,
+            reachedChipId: unlocks?.id,
+            reviews: [review],
+          };
+          const newIdx = paths.length;
+          setPaths((prev) => [...prev, newPath]);
+          setBuildingFromChip(null);
+          if (unlocks) {
+            setUnlockedChips((prev) => new Set([...prev, unlocks.id]));
+            setRecentlyUnlocked(new Set([unlocks.id]));
+            setTimeout(() => setRecentlyUnlocked(new Set()), 1500);
+            setActivePathIdx(null);
+          } else {
+            setActivePathIdx(newIdx);
+          }
+        } else if (activePathIdx !== null) {
+          setPaths((prev) => {
+            const next = [...prev];
+            const path = { ...next[activePathIdx] };
+            path.nodes = [...path.nodes, { x: gx, y: gy }];
+            path.reviews = [...path.reviews, review];
+            if (unlocks) path.reachedChipId = unlocks.id;
+            next[activePathIdx] = path;
+            return next;
+          });
+          if (unlocks) {
+            setUnlockedChips((prev) => new Set([...prev, unlocks.id]));
+            setRecentlyUnlocked(new Set([unlocks.id]));
+            setTimeout(() => setRecentlyUnlocked(new Set()), 1500);
+            setActivePathIdx(null);
+          }
+        }
+      } else {
+        setPendingGhost({ x: gx, y: gy, unlocks });
+      }
     },
-    [],
+    [skipReview, buildingFromChip, activePathIdx, paths],
   );
 
   /* ── Get the source song name for the current build context ── */
@@ -774,6 +823,48 @@ export default function Board() {
           onClose={() => setPendingGhost(null)}
         />
       )}
+
+      {/* Dev Tools */}
+      <div
+        className="fixed top-4 left-4"
+        style={{
+          zIndex: 100,
+          background: "rgba(0,0,0,0.85)",
+          border: "1px solid rgba(249,206,15,0.2)",
+          borderRadius: 8,
+          padding: "10px 14px",
+          fontFamily: "'Barlow', sans-serif",
+          fontSize: 11,
+          color: "rgba(255,255,255,0.6)",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 9,
+            color: "rgba(249,206,15,0.5)",
+            marginBottom: 8,
+            letterSpacing: 1,
+          }}
+        >
+          DEV TOOLS
+        </div>
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            cursor: "pointer",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={skipReview}
+            onChange={(e) => setSkipReview(e.target.checked)}
+            style={{ accentColor: "#f9ce0f" }}
+          />
+          Skip reviews
+        </label>
+      </div>
 
       {/* Legend */}
       <div
@@ -1141,7 +1232,7 @@ function Chip({
         src={dranixLogo}
         alt="Dranix"
         className="absolute"
-        style={{ top: "25%", width: "30%", pointerEvents: "none" }}
+        style={{ top: "23%", width: "25%", pointerEvents: "none" }}
       />
 
       {/* Song name — under logo */}
@@ -1150,7 +1241,7 @@ function Chip({
         style={{
           fontFamily: "'Barlow', sans-serif",
           fontSize: song.id === 5 ? 8 : 10,
-          top: "38%",
+          top: "29%",
         }}
       >
         {song.label}
@@ -1159,14 +1250,15 @@ function Chip({
       {/* Play button — center of chip */}
       {unlocked && song.youtubeId && (
         <div
-          className="absolute flex items-center justify-center rounded-full animate-play-btn"
+          className="absolute flex items-center justify-center play-btn"
           style={{
-            width: 30,
-            height: 30,
+            width: 24,
+            height: 24,
             background: "#000000",
+            borderRadius: 5,
             cursor: "pointer",
             zIndex: 11,
-            boxShadow: "0 0 8px rgba(249,206,15,0.4)",
+            border: "1px solid rgba(249,206,15,0.3)",
           }}
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
@@ -1175,7 +1267,13 @@ function Chip({
             onPlay();
           }}
         >
-          <svg width="12" height="14" viewBox="0 0 10 12" fill="none" style={{ marginLeft: 1 }}>
+          <svg
+            width="10"
+            height="12"
+            viewBox="0 0 10 12"
+            fill="none"
+            style={{ marginLeft: 1 }}
+          >
             <path d="M1 1L9 6L1 11V1Z" fill="#f9ce0f" />
           </svg>
         </div>
@@ -1374,7 +1472,7 @@ function YouTubePlayer({
     >
       <div
         className="yt-player-card review-popup-enter"
-        style={{ width: 480, maxWidth: "90vw" }}
+        style={{ width: 960, maxWidth: "90vw" }}
         onMouseDown={(e) => e.stopPropagation()}
         onTouchStart={(e) => e.stopPropagation()}
       >
@@ -1390,7 +1488,9 @@ function YouTubePlayer({
         >
           {song.label}
         </div>
-        <div style={{ position: "relative", paddingBottom: "56.25%", height: 0 }}>
+        <div
+          style={{ position: "relative", paddingBottom: "56.25%", height: 0 }}
+        >
           <iframe
             src={`https://www.youtube.com/embed/${song.youtubeId}?autoplay=1`}
             title={song.label}
