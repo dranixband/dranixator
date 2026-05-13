@@ -119,11 +119,35 @@ const COLOR_CYCLE: WireColor[] = [
 
 const SONGS: SongChip[] = [
   { id: 1, label: "de(A)d ins(I)de", x: 0, y: 0, audioSrc: "songs/dead.mp3" },
-  { id: 2, label: "de[AR] sinner", x: -480, y: -480, audioSrc: "songs/sinner.mp3" },
+  {
+    id: 2,
+    label: "de[AR] sinner",
+    x: -480,
+    y: -480,
+    audioSrc: "songs/sinner.mp3",
+  },
   { id: 3, label: "r{IT}ual", x: 480, y: -480, audioSrc: "songs/ritual.mp3" },
-  { id: 4, label: "adam & /AI/ve", x: -480, y: 480, audioSrc: "songs/adam.mp3" },
-  { id: 5, label: "samur<AI/> protocol", x: 480, y: 480, audioSrc: "songs/samurai.mp3" },
-  { id: 6, label: "r<AI/>sing", x: 0, y: -480, audioSrc: "songs/AdultPanda.wav" },
+  {
+    id: 4,
+    label: "adam & /AI/ve",
+    x: -480,
+    y: 480,
+    audioSrc: "songs/adam.mp3",
+  },
+  {
+    id: 5,
+    label: "samur<AI/> protocol",
+    x: 480,
+    y: 480,
+    audioSrc: "songs/samurai.mp3",
+  },
+  {
+    id: 6,
+    label: "r<AI/>sing",
+    x: 0,
+    y: -480,
+    audioSrc: "songs/AdultPanda.wav",
+  },
   { id: 7, label: "effes", x: 0, y: 480, audioSrc: "songs/effes.mp3" },
   { id: 8, label: "pizda", x: -480, y: 0, audioSrc: "songs/Pizda.mp3" },
   { id: 9, label: "doshik", x: 480, y: 0, audioSrc: "songs/Doshik.mp3" },
@@ -319,10 +343,26 @@ export default function Board() {
           name: "Alex",
           text: "This beat is absolutely fire, love the bass line!",
         },
-        { type: "text", name: "Maria", text: "Reminds me of summer nights, beautiful vibes" },
-        { type: "text", name: "DJ_K", text: "The synth work here is next level production" },
-        { type: "text", name: "Luna", text: "Been playing this on repeat all week long" },
-        { type: "text", name: "Max", text: "One of the best tracks I have heard this year" },
+        {
+          type: "text",
+          name: "Maria",
+          text: "Reminds me of summer nights, beautiful vibes",
+        },
+        {
+          type: "text",
+          name: "DJ_K",
+          text: "The synth work here is next level production",
+        },
+        {
+          type: "text",
+          name: "Luna",
+          text: "Been playing this on repeat all week long",
+        },
+        {
+          type: "text",
+          name: "Max",
+          text: "One of the best tracks I have heard this year",
+        },
       ],
     },
   ]);
@@ -401,11 +441,12 @@ export default function Board() {
       const head = nodes[nodes.length - 1];
       // When only 1 node, use source chip center as "previous" to block going back toward it
       const sourceChip = SONGS.find((s) => s.id === path.sourceChipId);
-      const prev = nodes.length > 1
-        ? nodes[nodes.length - 2]
-        : sourceChip
-          ? { x: sourceChip.x, y: sourceChip.y }
-          : null;
+      const prev =
+        nodes.length > 1
+          ? nodes[nodes.length - 2]
+          : sourceChip
+            ? { x: sourceChip.x, y: sourceChip.y }
+            : null;
       return getGhostPositions(
         head.x,
         head.y,
@@ -434,49 +475,52 @@ export default function Board() {
 
   /* ── Audio Player ── */
 
-  const playAudio = useCallback((chip: SongChip) => {
-    if (!chip.audioSrc) return;
+  const playAudio = useCallback(
+    (chip: SongChip) => {
+      if (!chip.audioSrc) return;
 
-    // If clicking the same chip that's already playing, toggle play/pause
-    if (playingChip?.id === chip.id && audioRef.current) {
-      if (isAudioPlaying) {
-        audioRef.current.pause();
-        setIsAudioPlaying(false);
-      } else {
-        audioRef.current.play();
-        setIsAudioPlaying(true);
+      // If clicking the same chip that's already playing, toggle play/pause
+      if (playingChip?.id === chip.id && audioRef.current) {
+        if (isAudioPlaying) {
+          audioRef.current.pause();
+          setIsAudioPlaying(false);
+        } else {
+          audioRef.current.play();
+          setIsAudioPlaying(true);
+        }
+        return;
       }
-      return;
-    }
 
-    // Stop previous
-    if (audioRef.current) {
-      audioRef.current.pause();
-      clearInterval(progressIntervalRef.current);
-    }
+      // Stop previous
+      if (audioRef.current) {
+        audioRef.current.pause();
+        clearInterval(progressIntervalRef.current);
+      }
 
-    const base = import.meta.env.BASE_URL;
-    const audio = new Audio(`${base}${chip.audioSrc}`);
-    audioRef.current = audio;
-    setPlayingChip(chip);
-    setAudioProgress(0);
-    setAudioDuration(0);
+      const base = import.meta.env.BASE_URL;
+      const audio = new Audio(`${base}${chip.audioSrc}`);
+      audioRef.current = audio;
+      setPlayingChip(chip);
+      setAudioProgress(0);
+      setAudioDuration(0);
 
-    audio.onloadedmetadata = () => setAudioDuration(audio.duration);
-    audio.onended = () => {
-      setIsAudioPlaying(false);
-      setAudioProgress(audio.duration);
-      clearInterval(progressIntervalRef.current);
-    };
+      audio.onloadedmetadata = () => setAudioDuration(audio.duration);
+      audio.onended = () => {
+        setIsAudioPlaying(false);
+        setAudioProgress(audio.duration);
+        clearInterval(progressIntervalRef.current);
+      };
 
-    audio.volume = audioVolume;
-    audio.play();
-    setIsAudioPlaying(true);
+      audio.volume = audioVolume;
+      audio.play();
+      setIsAudioPlaying(true);
 
-    progressIntervalRef.current = window.setInterval(() => {
-      if (audio) setAudioProgress(audio.currentTime);
-    }, 250);
-  }, [playingChip, isAudioPlaying, audioVolume]);
+      progressIntervalRef.current = window.setInterval(() => {
+        if (audio) setAudioProgress(audio.currentTime);
+      }, 250);
+    },
+    [playingChip, isAudioPlaying, audioVolume],
+  );
 
   const toggleAudioPlayback = useCallback(() => {
     if (!audioRef.current) return;
@@ -489,11 +533,14 @@ export default function Board() {
     }
   }, [isAudioPlaying]);
 
-  const seekAudio = useCallback((fraction: number) => {
-    if (!audioRef.current || !audioDuration) return;
-    audioRef.current.currentTime = fraction * audioDuration;
-    setAudioProgress(audioRef.current.currentTime);
-  }, [audioDuration]);
+  const seekAudio = useCallback(
+    (fraction: number) => {
+      if (!audioRef.current || !audioDuration) return;
+      audioRef.current.currentTime = fraction * audioDuration;
+      setAudioProgress(audioRef.current.currentTime);
+    },
+    [audioDuration],
+  );
 
   const changeVolume = useCallback((vol: number) => {
     setAudioVolume(vol);
@@ -793,7 +840,12 @@ export default function Board() {
           }
         }
       } else {
-        setPendingGhost({ x: gx, y: gy, unlocks, nodeType: getNodeTypeForPosition(gx, gy) });
+        setPendingGhost({
+          x: gx,
+          y: gy,
+          unlocks,
+          nodeType: getNodeTypeForPosition(gx, gy),
+        });
       }
     },
     [skipReview, buildingFromChip, activePathIdx, paths],
@@ -1101,10 +1153,19 @@ export default function Board() {
           letterSpacing: 0.5,
         }}
       >
-        <div>CHIPS_ACTIVE: {unlockedChips.size}/{SONGS.length}</div>
+        <div>
+          CHIPS_ACTIVE: {unlockedChips.size}/{SONGS.length}
+        </div>
         <div>PATHS_BUILT: {paths.length}</div>
-        <div>NODES_TOTAL: {paths.reduce((sum, p) => sum + p.nodes.length, 0)}</div>
-<div>BOARD_STATUS: {unlockedChips.size === SONGS.length ? "COMPLETE" : `${Math.round((unlockedChips.size / SONGS.length) * 100)}%`}</div>
+        <div>
+          NODES_TOTAL: {paths.reduce((sum, p) => sum + p.nodes.length, 0)}
+        </div>
+        <div>
+          BOARD_STATUS:{" "}
+          {unlockedChips.size === SONGS.length
+            ? "COMPLETE"
+            : `${Math.round((unlockedChips.size / SONGS.length) * 100)}%`}
+        </div>
       </div>
 
       {/* Legend */}
@@ -1271,24 +1332,80 @@ function PathSVG({
             {reviewType === "audio" && (
               <g opacity={0.85}>
                 {/* 3 waveform bars */}
-                <rect x={n.x - 3} y={n.y - 2} width={1.5} height={4} rx={0.5} fill="#000" />
-                <rect x={n.x - 0.75} y={n.y - 3.5} width={1.5} height={7} rx={0.5} fill="#000" />
-                <rect x={n.x + 1.5} y={n.y - 1.5} width={1.5} height={3} rx={0.5} fill="#000" />
+                <rect
+                  x={n.x - 3}
+                  y={n.y - 2}
+                  width={1.5}
+                  height={4}
+                  rx={0.5}
+                  fill="#000"
+                />
+                <rect
+                  x={n.x - 0.75}
+                  y={n.y - 3.5}
+                  width={1.5}
+                  height={7}
+                  rx={0.5}
+                  fill="#000"
+                />
+                <rect
+                  x={n.x + 1.5}
+                  y={n.y - 1.5}
+                  width={1.5}
+                  height={3}
+                  rx={0.5}
+                  fill="#000"
+                />
               </g>
             )}
             {reviewType === "drawing" && (
               <g opacity={0.85}>
                 {/* 2x2 pixel grid */}
-                <rect x={n.x - 2.5} y={n.y - 2.5} width={2} height={2} fill="#000" />
-                <rect x={n.x + 0.5} y={n.y - 2.5} width={2} height={2} fill="#000" opacity={0.5} />
-                <rect x={n.x - 2.5} y={n.y + 0.5} width={2} height={2} fill="#000" opacity={0.5} />
-                <rect x={n.x + 0.5} y={n.y + 0.5} width={2} height={2} fill="#000" />
+                <rect
+                  x={n.x - 2.5}
+                  y={n.y - 2.5}
+                  width={2}
+                  height={2}
+                  fill="#000"
+                />
+                <rect
+                  x={n.x + 0.5}
+                  y={n.y - 2.5}
+                  width={2}
+                  height={2}
+                  fill="#000"
+                  opacity={0.5}
+                />
+                <rect
+                  x={n.x - 2.5}
+                  y={n.y + 0.5}
+                  width={2}
+                  height={2}
+                  fill="#000"
+                  opacity={0.5}
+                />
+                <rect
+                  x={n.x + 0.5}
+                  y={n.y + 0.5}
+                  width={2}
+                  height={2}
+                  fill="#000"
+                />
               </g>
             )}
             {reviewType === "photo" && (
               <g opacity={0.85}>
                 {/* Tiny camera/frame icon */}
-                <rect x={n.x - 3} y={n.y - 2} width={6} height={4} rx={0.5} fill="none" stroke="#000" strokeWidth={0.8} />
+                <rect
+                  x={n.x - 3}
+                  y={n.y - 2}
+                  width={6}
+                  height={4}
+                  rx={0.5}
+                  fill="none"
+                  stroke="#000"
+                  strokeWidth={0.8}
+                />
                 <circle cx={n.x} cy={n.y} r={1.2} fill="#000" />
               </g>
             )}
@@ -1399,26 +1516,80 @@ function GhostNode({
       {/* Type hint icon */}
       <g opacity={0.7} style={{ pointerEvents: "none" }}>
         {nodeType === "text" && (
-          <text x={x} y={y + 3} textAnchor="middle" fontSize={10} fill={color} fontFamily="monospace" fontWeight="bold">T</text>
+          <text
+            x={x}
+            y={y + 3}
+            textAnchor="middle"
+            fontSize={10}
+            fill={color}
+            fontFamily="monospace"
+            fontWeight="bold"
+          >
+            T
+          </text>
         )}
         {nodeType === "audio" && (
           <>
-            <rect x={x - 4} y={y - 2.5} width={2} height={5} rx={0.5} fill={color} />
-            <rect x={x - 1} y={y - 4.5} width={2} height={9} rx={0.5} fill={color} />
-            <rect x={x + 2} y={y - 1.5} width={2} height={3} rx={0.5} fill={color} />
+            <rect
+              x={x - 4}
+              y={y - 2.5}
+              width={2}
+              height={5}
+              rx={0.5}
+              fill={color}
+            />
+            <rect
+              x={x - 1}
+              y={y - 4.5}
+              width={2}
+              height={9}
+              rx={0.5}
+              fill={color}
+            />
+            <rect
+              x={x + 2}
+              y={y - 1.5}
+              width={2}
+              height={3}
+              rx={0.5}
+              fill={color}
+            />
           </>
         )}
         {nodeType === "drawing" && (
           <>
             <rect x={x - 3.5} y={y - 3.5} width={3} height={3} fill={color} />
-            <rect x={x + 0.5} y={y - 3.5} width={3} height={3} fill={color} opacity={0.5} />
-            <rect x={x - 3.5} y={y + 0.5} width={3} height={3} fill={color} opacity={0.5} />
+            <rect
+              x={x + 0.5}
+              y={y - 3.5}
+              width={3}
+              height={3}
+              fill={color}
+              opacity={0.5}
+            />
+            <rect
+              x={x - 3.5}
+              y={y + 0.5}
+              width={3}
+              height={3}
+              fill={color}
+              opacity={0.5}
+            />
             <rect x={x + 0.5} y={y + 0.5} width={3} height={3} fill={color} />
           </>
         )}
         {nodeType === "photo" && (
           <>
-            <rect x={x - 4.5} y={y - 3} width={9} height={6} rx={1} fill="none" stroke={color} strokeWidth={1} />
+            <rect
+              x={x - 4.5}
+              y={y - 3}
+              width={9}
+              height={6}
+              rx={1}
+              fill="none"
+              stroke={color}
+              strokeWidth={1}
+            />
             <circle cx={x} cy={y} r={2} fill={color} />
           </>
         )}
@@ -1529,7 +1700,9 @@ function LottieReaction({
         gap: 1,
         padding: "1px 3px",
         background: active ? "rgba(249,206,15,0.12)" : "rgba(0,0,0,0.5)",
-        border: active ? "1px solid rgba(249,206,15,0.25)" : "1px solid rgba(255,255,255,0.1)",
+        border: active
+          ? "1px solid rgba(249,206,15,0.25)"
+          : "1px solid rgba(255,255,255,0.1)",
         borderRadius: 8,
         cursor: "pointer",
         transition: "all 0.2s",
@@ -1717,7 +1890,6 @@ function Chip({
               key={r.id}
               id={r.id}
               path={r.path}
-              flip={r.flip}
               count={reactionCounts[r.id] ?? 0}
               active={selectedReaction === r.id}
               onReact={() => onReaction(r.id)}
@@ -1927,22 +2099,12 @@ function ReviewViewer({
               }}
             >
               {isPlaying ? (
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 14 14"
-                  fill="#22c55e"
-                >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="#22c55e">
                   <rect x="1" y="1" width="4" height="12" rx="1" />
                   <rect x="9" y="1" width="4" height="12" rx="1" />
                 </svg>
               ) : (
-                <svg
-                  width="14"
-                  height="16"
-                  viewBox="0 0 14 16"
-                  fill="#f5c542"
-                >
+                <svg width="14" height="16" viewBox="0 0 14 16" fill="#f5c542">
                   <path d="M2 1L12 8L2 15V1Z" />
                 </svg>
               )}
@@ -2043,7 +2205,10 @@ function AudioPlayerBar({
     const bar = barRef.current;
     if (!bar) return;
     const rect = bar.getBoundingClientRect();
-    const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const fraction = Math.max(
+      0,
+      Math.min(1, (e.clientX - rect.left) / rect.width),
+    );
     onSeek(fraction);
   };
 
@@ -2196,11 +2361,37 @@ function AudioPlayerBar({
         </div>
 
         {/* Volume */}
-        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="rgba(255,255,255,0.35)">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            flexShrink: 0,
+          }}
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 16 16"
+            fill="rgba(255,255,255,0.35)"
+          >
             <path d="M2 5.5h2.5L8 2v12L4.5 10.5H2a1 1 0 01-1-1v-3a1 1 0 011-1z" />
-            {volume > 0.01 && <path d="M10 5.5a3.5 3.5 0 010 5" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.3" />}
-            {volume > 0.5 && <path d="M11.5 3.5a6 6 0 010 9" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.3" />}
+            {volume > 0.01 && (
+              <path
+                d="M10 5.5a3.5 3.5 0 010 5"
+                fill="none"
+                stroke="rgba(255,255,255,0.35)"
+                strokeWidth="1.3"
+              />
+            )}
+            {volume > 0.5 && (
+              <path
+                d="M11.5 3.5a6 6 0 010 9"
+                fill="none"
+                stroke="rgba(255,255,255,0.25)"
+                strokeWidth="1.3"
+              />
+            )}
           </svg>
           <div
             ref={volRef}
