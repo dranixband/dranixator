@@ -1028,7 +1028,44 @@ export default function Board() {
             ))}
           </defs>
 
-          {/* Rendered paths */}
+          {/* Socket connectors at chip anchors (rendered BEFORE paths so nodes appear on top) */}
+          <defs>
+            <radialGradient id="socket-glow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#dc2626" stopOpacity={0.15} />
+              <stop offset="100%" stopColor="#dc2626" stopOpacity={0} />
+            </radialGradient>
+          </defs>
+          {SONGS.map((song) =>
+            song.id !== 1 &&
+            getChipAnchors(song).map((anchor, i) => {
+              const dx = anchor.x - song.x;
+              const dy = anchor.y - song.y;
+              const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+              const active = unlockedChips.has(song.id);
+              return (
+                <g
+                  key={`socket-${song.id}-${i}`}
+                  transform={`translate(${anchor.x}, ${anchor.y}) rotate(${angle})`}
+                  opacity={active ? 1 : 0.3}
+                >
+                  {/* Outer arc */}
+                  <path
+                    d="M 3,-11 A 11,11 0 1,0 3,11"
+                    fill="none"
+                    stroke="#7a2a2a"
+                    strokeWidth={2}
+                  />
+                  {/* Inner cavity */}
+                  <path
+                    d="M 2,-7 A 7,7 0 1,0 2,7"
+                    fill="#0a0606"
+                  />
+                </g>
+              );
+            }),
+          )}
+
+          {/* Rendered paths (on top of sockets so nodes overlap them) */}
           {paths.map((path, idx) => (
             <PathSVG
               key={idx}
@@ -1063,6 +1100,7 @@ export default function Board() {
             unlocked={unlockedChips.has(song.id)}
             recentlyUnlocked={recentlyUnlocked.has(song.id)}
             isBuilding={buildingFromChip === song.id}
+            isPlaying={playingChip?.id === song.id && isAudioPlaying}
             onClick={() => handleChipClick(song.id)}
             onPlay={() => playAudio(song)}
             selectedReaction={chipReactions[song.id]?.selected ?? null}
@@ -1724,6 +1762,7 @@ function Chip({
   unlocked,
   recentlyUnlocked,
   isBuilding,
+  isPlaying,
   onClick,
   onPlay,
   selectedReaction,
@@ -1734,6 +1773,7 @@ function Chip({
   unlocked: boolean;
   recentlyUnlocked: boolean;
   isBuilding: boolean;
+  isPlaying: boolean;
   onClick: () => void;
   onPlay: () => void;
   selectedReaction: string | null;
@@ -1817,15 +1857,22 @@ function Chip({
             onPlay();
           }}
         >
-          <svg
-            width="10"
-            height="12"
-            viewBox="0 0 10 12"
-            fill="none"
-            style={{ marginLeft: 1 }}
-          >
-            <path d="M1 1L9 6L1 11V1Z" fill="#f9ce0f" />
-          </svg>
+          {isPlaying ? (
+            <svg width="10" height="12" viewBox="0 0 10 12" fill="#f9ce0f">
+              <rect x="1" y="1" width="3" height="10" rx="0.5" />
+              <rect x="6" y="1" width="3" height="10" rx="0.5" />
+            </svg>
+          ) : (
+            <svg
+              width="10"
+              height="12"
+              viewBox="0 0 10 12"
+              fill="none"
+              style={{ marginLeft: 1 }}
+            >
+              <path d="M1 1L9 6L1 11V1Z" fill="#f9ce0f" />
+            </svg>
+          )}
         </div>
       )}
 
