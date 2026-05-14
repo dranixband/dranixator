@@ -1,17 +1,19 @@
+import type { SongLabel } from "./songs";
+
 export interface Riddle {
   /** The emoji clue shown to the player */
   emojis: string[];
-  /** The correct answer (must match a song label exactly) */
-  answer: string;
+  /** The correct answer — must be a valid SongLabel */
+  answer: SongLabel;
   /** 4 wrong options (correct answer is added automatically = 5 total) */
-  decoys: string[];
+  decoys: SongLabel[];
 }
 
 /**
  * Add new riddles here.
  * - `emojis`: 3 emojis that hint at the song
- * - `answer`: exact song label from SONGS
- * - `decoys`: 4 wrong song names (the correct one is mixed in automatically)
+ * - `answer`: exact song label (TS will error on typos)
+ * - `decoys`: 4 wrong song labels
  */
 export const RIDDLES: Riddle[] = [
   {

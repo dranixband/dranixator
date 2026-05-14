@@ -1,6 +1,8 @@
+import type { SongLabel } from "./songs";
+
 export interface SongLyrics {
-  /** Must match the song label in SONGS exactly */
-  songLabel: string;
+  /** Must be a valid SongLabel — TS will error on typos */
+  songLabel: SongLabel;
   /** Full lyrics text */
   lyrics: string;
 }

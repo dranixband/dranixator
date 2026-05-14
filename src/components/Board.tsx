@@ -5,6 +5,7 @@ import chipImg from "../assets/Chip.jpg";
 import dranixLogo from "../assets/Dranix logo.svg";
 import doorLeft from "../assets/door-left.svg";
 import doorRight from "../assets/door-right.svg";
+import type { SongLabel } from "../constants/songs";
 
 /* ───── Types ───── */
 
@@ -14,7 +15,7 @@ export type NodeType = "prompt" | "rhythm" | "drawing" | "riddle" | "puzzle" | "
 
 interface SongChip {
   id: number;
-  label: string;
+  label: SongLabel;
   x: number;
   y: number;
   audioSrc?: string;
