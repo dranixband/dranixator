@@ -1,73 +1,116 @@
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import type { Review, NodeType } from "./Board";
-import AudioRecorder from "./AudioRecorder";
 import PixelCanvas from "./PixelCanvas";
+import EmojiRiddle from "./EmojiRiddle";
+import RhythmTap from "./RhythmTap";
+import SlidingPuzzle from "./SlidingPuzzle";
+import MemoryGame from "./MemoryGame";
+import WireTrace from "./WireTrace";
 
 const MIN_CHARS = 5;
 const MAX_CHARS = 150;
-const MAX_PHOTO_KB = 100;
+
+const PROMPTS = [
+  "Describe this song in 3 words",
+  "What color is this track?",
+  "In what movie could this track play?",
+  "One word — association",
+  "What time of day does this song sound like?",
+  "What weather matches this track?",
+  "What animal is this song?",
+  "Describe the mood in one sentence",
+  "What would you do while listening to this?",
+  "If this song were a place — where?",
+  "Rate this track with a metaphor",
+  "What does the vocalist's voice remind you of?",
+  "What emotion hits hardest in this track?",
+  "Describe this song to someone who hasn't heard it",
+  "What genre would you invent for this track?",
+];
 
 interface ReviewPopupProps {
   songName: string;
   nodeType: NodeType;
+  audioSrc?: string;
+  puzzleImage?: string;
   onSubmit: (review: Review) => void;
   onClose: () => void;
 }
 
 const NODE_TYPE_LABELS: Record<NodeType, string> = {
-  text: "Leave a review",
-  audio: "Record a voice note",
+  prompt: "Answer a question",
+  rhythm: "Tap the rhythm",
   drawing: "Draw pixel art",
-  photo: "Upload a photo",
+  riddle: "Guess the track",
+  puzzle: "Solve the puzzle",
+  memory: "Find all pairs",
+  wire: "Trace the wire",
 };
 
 export default function ReviewPopup({
   songName,
   nodeType,
+  audioSrc,
+  puzzleImage,
   onSubmit,
   onClose,
 }: ReviewPopupProps) {
   const [name, setName] = useState("");
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Text state
+  // Prompt state
+  const currentPrompt = useMemo(
+    () => PROMPTS[Math.floor(Math.random() * PROMPTS.length)],
+    [],
+  );
   const [text, setText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Audio state
-  const [audioData, setAudioData] = useState<{
-    url: string;
-    durationMs: number;
+  // Riddle state
+  const [riddleCorrect, setRiddleCorrect] = useState<boolean | null>(null);
+
+  // Rhythm state
+  const [rhythmData, setRhythmData] = useState<{
+    taps: number[];
+    duration: number;
   } | null>(null);
 
   // Drawing state
   const [drawingDataUrl, setDrawingDataUrl] = useState<string>("");
 
-  // Photo state
-  const [photoDataUrl, setPhotoDataUrl] = useState<string>("");
-  const [cameraActive, setCameraActive] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const cameraStreamRef = useRef<MediaStream | null>(null);
+  // Puzzle state
+  const [puzzleMoves, setPuzzleMoves] = useState<number | null>(null);
+
+  // Memory state
+  const [memoryFlips, setMemoryFlips] = useState<number | null>(null);
+
+  // Wire state
+  const [wireLines, setWireLines] = useState<number | null>(null);
 
   const charCount = text.length;
   const isTextValid = charCount >= MIN_CHARS && charCount <= MAX_CHARS;
   const isOverLimit = charCount > MAX_CHARS;
 
   const isValid =
-    nodeType === "text"
+    nodeType === "prompt"
       ? isTextValid
-      : nodeType === "audio"
-        ? !!audioData
+      : nodeType === "rhythm"
+        ? !!(rhythmData && rhythmData.taps.length >= 5)
         : nodeType === "drawing"
           ? !!drawingDataUrl
-          : nodeType === "photo"
-            ? !!photoDataUrl
-            : false;
+          : nodeType === "riddle"
+            ? riddleCorrect === true
+            : nodeType === "puzzle"
+              ? puzzleMoves !== null
+              : nodeType === "memory"
+                ? memoryFlips !== null
+                : nodeType === "wire"
+                  ? wireLines !== null
+                  : false;
 
-  // Focus textarea when switching to text
+  // Focus textarea for prompt
   useEffect(() => {
-    if (nodeType === "text") {
+    if (nodeType === "prompt") {
       setTimeout(() => textareaRef.current?.focus(), 100);
     }
   }, [nodeType]);
@@ -91,89 +134,6 @@ export default function ReviewPopup({
     [onClose],
   );
 
-  // Compress an image source to a data URL
-  const compressImage = useCallback(
-    (source: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement, srcW: number, srcH: number) => {
-      const maxDim = 300;
-      let w = srcW;
-      let h = srcH;
-      if (w > maxDim || h > maxDim) {
-        const ratio = Math.min(maxDim / w, maxDim / h);
-        w = Math.round(w * ratio);
-        h = Math.round(h * ratio);
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(source, 0, 0, w, h);
-
-      let quality = 0.7;
-      let dataUrl = canvas.toDataURL("image/jpeg", quality);
-      while (dataUrl.length > MAX_PHOTO_KB * 1024 * 1.37 && quality > 0.2) {
-        quality -= 0.1;
-        dataUrl = canvas.toDataURL("image/jpeg", quality);
-      }
-      return dataUrl;
-    },
-    [],
-  );
-
-  // Photo upload handling
-  const handlePhotoSelect = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      const img = new Image();
-      const objectUrl = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(objectUrl);
-        setPhotoDataUrl(compressImage(img, img.width, img.height));
-      };
-      img.src = objectUrl;
-    },
-    [compressImage],
-  );
-
-  // Camera functions
-  const stopCamera = useCallback(() => {
-    cameraStreamRef.current?.getTracks().forEach((t) => t.stop());
-    cameraStreamRef.current = null;
-    setCameraActive(false);
-  }, []);
-
-  const startCamera = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } },
-      });
-      cameraStreamRef.current = stream;
-      setCameraActive(true);
-      // Wait for video element to mount then attach stream
-      requestAnimationFrame(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      });
-    } catch {
-      // Fallback: no camera permission or not available
-    }
-  }, []);
-
-  const capturePhoto = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    setPhotoDataUrl(compressImage(video, video.videoWidth, video.videoHeight));
-    stopCamera();
-  }, [compressImage, stopCamera]);
-
-  // Cleanup camera on unmount or close
-  useEffect(() => {
-    return () => {
-      cameraStreamRef.current?.getTracks().forEach((t) => t.stop());
-    };
-  }, []);
-
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
@@ -182,16 +142,21 @@ export default function ReviewPopup({
       const authorName = name.trim() || "Anonymous";
 
       switch (nodeType) {
-        case "text":
-          onSubmit({ type: "text", name: authorName, text: text.trim() });
+        case "prompt":
+          onSubmit({
+            type: "prompt",
+            name: authorName,
+            prompt: currentPrompt,
+            text: text.trim(),
+          });
           break;
-        case "audio":
-          if (audioData) {
+        case "rhythm":
+          if (rhythmData) {
             onSubmit({
-              type: "audio",
+              type: "rhythm",
               name: authorName,
-              audioUrl: audioData.url,
-              durationMs: audioData.durationMs,
+              taps: rhythmData.taps,
+              duration: rhythmData.duration,
             });
           }
           break;
@@ -202,16 +167,45 @@ export default function ReviewPopup({
             imageDataUrl: drawingDataUrl,
           });
           break;
-        case "photo":
-          onSubmit({
-            type: "photo",
-            name: authorName,
-            imageDataUrl: photoDataUrl,
-          });
+        case "riddle":
+          if (riddleCorrect !== null) {
+            onSubmit({
+              type: "riddle",
+              name: authorName,
+              correct: riddleCorrect,
+            });
+          }
+          break;
+        case "puzzle":
+          if (puzzleMoves !== null) {
+            onSubmit({
+              type: "puzzle",
+              name: authorName,
+              moves: puzzleMoves,
+            });
+          }
+          break;
+        case "memory":
+          if (memoryFlips !== null) {
+            onSubmit({
+              type: "memory",
+              name: authorName,
+              flips: memoryFlips,
+            });
+          }
+          break;
+        case "wire":
+          if (wireLines !== null) {
+            onSubmit({
+              type: "wire",
+              name: authorName,
+              lines: wireLines,
+            });
+          }
           break;
       }
     },
-    [name, text, nodeType, isValid, audioData, drawingDataUrl, photoDataUrl, onSubmit],
+    [name, text, nodeType, isValid, rhythmData, drawingDataUrl, riddleCorrect, puzzleMoves, memoryFlips, wireLines, currentPrompt, onSubmit],
   );
 
   return (
@@ -312,27 +306,30 @@ export default function ReviewPopup({
             />
           </div>
 
-          {/* === TEXT FORM === */}
-          {nodeType === "text" && (
+          {/* === PROMPT FORM === */}
+          {nodeType === "prompt" && (
             <div style={{ marginBottom: 16 }}>
-              <label
+              {/* The random prompt */}
+              <div
                 style={{
-                  display: "block",
-                  fontSize: 11,
+                  padding: "10px 14px",
+                  marginBottom: 10,
+                  background: "rgba(245,197,66,0.06)",
+                  border: "1px solid rgba(245,197,66,0.15)",
+                  borderRadius: 8,
+                  fontSize: 14,
                   fontFamily: "monospace",
-                  color: "rgba(255,255,255,0.35)",
-                  marginBottom: 5,
-                  textTransform: "uppercase",
-                  letterSpacing: 1,
+                  color: "#f5c542",
+                  lineHeight: 1.4,
                 }}
               >
-                Review
-              </label>
+                {currentPrompt}
+              </div>
               <textarea
                 ref={textareaRef}
                 value={text}
                 onChange={(e) => setText(e.target.value.slice(0, MAX_CHARS + 10))}
-                placeholder="What do you think about this song?"
+                placeholder="Your answer..."
                 rows={3}
                 style={{
                   width: "100%",
@@ -394,8 +391,8 @@ export default function ReviewPopup({
             </div>
           )}
 
-          {/* === AUDIO FORM === */}
-          {nodeType === "audio" && (
+          {/* === RHYTHM FORM === */}
+          {nodeType === "rhythm" && (
             <div style={{ marginBottom: 16 }}>
               <label
                 style={{
@@ -408,13 +405,28 @@ export default function ReviewPopup({
                   letterSpacing: 1,
                 }}
               >
-                Voice message
+                Tap along to the beat
               </label>
-              <AudioRecorder
-                onDataChange={(url, durationMs) =>
-                  setAudioData({ url, durationMs })
-                }
-              />
+              {audioSrc ? (
+                <RhythmTap
+                  audioSrc={audioSrc}
+                  onDataChange={(taps, duration) =>
+                    setRhythmData(taps.length > 0 ? { taps, duration } : null)
+                  }
+                />
+              ) : (
+                <div
+                  style={{
+                    padding: 16,
+                    fontSize: 12,
+                    fontFamily: "monospace",
+                    color: "rgba(255,59,92,0.6)",
+                    textAlign: "center",
+                  }}
+                >
+                  No audio available for this chip
+                </div>
+              )}
             </div>
           )}
 
@@ -438,8 +450,8 @@ export default function ReviewPopup({
             </div>
           )}
 
-          {/* === PHOTO FORM === */}
-          {nodeType === "photo" && (
+          {/* === RIDDLE FORM === */}
+          {nodeType === "riddle" && (
             <div style={{ marginBottom: 16 }}>
               <label
                 style={{
@@ -452,184 +464,72 @@ export default function ReviewPopup({
                   letterSpacing: 1,
                 }}
               >
-                Photo
+                Emoji riddle
               </label>
+              <EmojiRiddle onSolved={(correct) => setRiddleCorrect(correct)} />
+            </div>
+          )}
 
-              {cameraActive ? (
-                /* Live camera view */
-                <div style={{ textAlign: "center" }}>
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    style={{
-                      width: "100%",
-                      borderRadius: 8,
-                      border: "1px solid rgba(34,197,94,0.2)",
-                      marginBottom: 8,
-                      background: "#000",
-                    }}
-                  />
-                  <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-                    <button
-                      type="button"
-                      onClick={capturePhoto}
-                      style={{
-                        padding: "8px 20px",
-                        fontSize: 11,
-                        fontFamily: "monospace",
-                        fontWeight: 700,
-                        color: "#0a1510",
-                        background: "linear-gradient(135deg, #f5c542 0%, #d4a030 100%)",
-                        border: "1px solid rgba(245,197,66,0.6)",
-                        borderRadius: 6,
-                        cursor: "pointer",
-                        textTransform: "uppercase",
-                        letterSpacing: 1,
-                      }}
-                    >
-                      Capture
-                    </button>
-                    <button
-                      type="button"
-                      onClick={stopCamera}
-                      style={{
-                        padding: "8px 14px",
-                        fontSize: 11,
-                        fontFamily: "monospace",
-                        color: "rgba(255,255,255,0.4)",
-                        background: "rgba(255,255,255,0.05)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        borderRadius: 6,
-                        cursor: "pointer",
-                        textTransform: "uppercase",
-                        letterSpacing: 1,
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : !photoDataUrl ? (
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                  }}
-                >
-                  {/* Take photo button — opens webcam */}
-                  <button
-                    type="button"
-                    onClick={startCamera}
-                    style={{
-                      flex: 1,
-                      padding: "20px 0",
-                      fontSize: 11,
-                      fontFamily: "monospace",
-                      color: "rgba(255,255,255,0.4)",
-                      background: "rgba(0,0,0,0.3)",
-                      border: "1px dashed rgba(34,197,94,0.25)",
-                      borderRadius: 8,
-                      cursor: "pointer",
-                      textTransform: "uppercase",
-                      letterSpacing: 1,
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    <svg
-                      width="22"
-                      height="22"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      style={{ margin: "0 auto 6px" }}
-                    >
-                      <rect x="3" y="5" width="18" height="15" rx="2" />
-                      <circle cx="12" cy="13" r="4" />
-                      <path d="M8 5l1-2h6l1 2" />
-                    </svg>
-                    Take photo
-                  </button>
-                  {/* Upload button */}
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{
-                      flex: 1,
-                      padding: "20px 0",
-                      fontSize: 11,
-                      fontFamily: "monospace",
-                      color: "rgba(255,255,255,0.4)",
-                      background: "rgba(0,0,0,0.3)",
-                      border: "1px dashed rgba(34,197,94,0.25)",
-                      borderRadius: 8,
-                      cursor: "pointer",
-                      textTransform: "uppercase",
-                      letterSpacing: 1,
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    <svg
-                      width="22"
-                      height="22"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      style={{ margin: "0 auto 6px" }}
-                    >
-                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                      <polyline points="17 8 12 3 7 8" />
-                      <line x1="12" y1="3" x2="12" y2="15" />
-                    </svg>
-                    Upload
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoSelect}
-                    style={{ display: "none" }}
-                  />
-                </div>
-              ) : (
-                <div style={{ textAlign: "center" }}>
-                  <img
-                    src={photoDataUrl}
-                    alt="Preview"
-                    style={{
-                      maxWidth: "100%",
-                      maxHeight: 200,
-                      borderRadius: 8,
-                      border: "1px solid rgba(34,197,94,0.2)",
-                      marginBottom: 8,
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPhotoDataUrl("");
-                      if (fileInputRef.current) fileInputRef.current.value = "";
-                    }}
-                    style={{
-                      padding: "4px 12px",
-                      fontSize: 10,
-                      fontFamily: "monospace",
-                      color: "rgba(255,255,255,0.4)",
-                      background: "rgba(255,255,255,0.05)",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      borderRadius: 4,
-                      cursor: "pointer",
-                      textTransform: "uppercase",
-                      letterSpacing: 1,
-                    }}
-                  >
-                    Remove
-                  </button>
-                </div>
-              )}
+          {/* === PUZZLE FORM === */}
+          {nodeType === "puzzle" && (
+            <div style={{ marginBottom: 16 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  fontFamily: "monospace",
+                  color: "rgba(255,255,255,0.35)",
+                  marginBottom: 8,
+                  textTransform: "uppercase",
+                  letterSpacing: 1,
+                }}
+              >
+                Sliding puzzle
+              </label>
+              <SlidingPuzzle
+                imageSrc={`${import.meta.env.BASE_URL}${puzzleImage || "puzzleImages/misha.png"}`}
+                onSolved={(moves) => setPuzzleMoves(moves)}
+              />
+            </div>
+          )}
+
+          {/* === MEMORY FORM === */}
+          {nodeType === "memory" && (
+            <div style={{ marginBottom: 16 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  fontFamily: "monospace",
+                  color: "rgba(255,255,255,0.35)",
+                  marginBottom: 8,
+                  textTransform: "uppercase",
+                  letterSpacing: 1,
+                }}
+              >
+                Memory game
+              </label>
+              <MemoryGame onSolved={(flips) => setMemoryFlips(flips)} />
+            </div>
+          )}
+
+          {/* === WIRE FORM === */}
+          {nodeType === "wire" && (
+            <div style={{ marginBottom: 16 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  fontFamily: "monospace",
+                  color: "rgba(255,255,255,0.35)",
+                  marginBottom: 8,
+                  textTransform: "uppercase",
+                  letterSpacing: 1,
+                }}
+              >
+                Wire trace
+              </label>
+              <WireTrace onSolved={(l) => setWireLines(l)} />
             </div>
           )}
 

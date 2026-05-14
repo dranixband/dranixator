@@ -10,7 +10,7 @@ import doorRight from "../assets/door-right.svg";
 
 type WireColor = "yellow" | "cyan" | "red" | "magenta" | "green" | "orange";
 
-export type NodeType = "text" | "audio" | "drawing" | "photo";
+export type NodeType = "prompt" | "rhythm" | "drawing" | "riddle" | "puzzle" | "memory" | "wire";
 
 interface SongChip {
   id: number;
@@ -18,6 +18,7 @@ interface SongChip {
   x: number;
   y: number;
   audioSrc?: string;
+  puzzleImage?: string;
 }
 
 interface ViewState {
@@ -26,17 +27,18 @@ interface ViewState {
   scale: number;
 }
 
-interface TextReview {
-  type: "text";
+interface PromptReview {
+  type: "prompt";
   name: string;
+  prompt: string;
   text: string;
 }
 
-interface AudioReview {
-  type: "audio";
+interface RhythmReview {
+  type: "rhythm";
   name: string;
-  audioUrl: string;
-  durationMs: number;
+  taps: number[];
+  duration: number;
 }
 
 interface DrawingReview {
@@ -45,13 +47,31 @@ interface DrawingReview {
   imageDataUrl: string;
 }
 
-interface PhotoReview {
-  type: "photo";
+interface RiddleReview {
+  type: "riddle";
   name: string;
-  imageDataUrl: string;
+  correct: boolean;
 }
 
-export type Review = TextReview | AudioReview | DrawingReview | PhotoReview;
+interface PuzzleReview {
+  type: "puzzle";
+  name: string;
+  moves: number;
+}
+
+interface MemoryReview {
+  type: "memory";
+  name: string;
+  flips: number;
+}
+
+interface WireReview {
+  type: "wire";
+  name: string;
+  lines: number;
+}
+
+export type Review = PromptReview | RhythmReview | DrawingReview | RiddleReview | PuzzleReview | MemoryReview | WireReview;
 
 interface PathData {
   sourceChipId: number;
@@ -66,14 +86,16 @@ interface PendingGhost {
   y: number;
   unlocks?: SongChip;
   nodeType: NodeType;
+  audioSrc?: string;
+  puzzleImage?: string;
 }
 
 /** Deterministic node type from grid coordinates (checkerboard pattern) */
 function getNodeTypeForPosition(x: number, y: number): NodeType {
   const gx = Math.round(x / GRID);
   const gy = Math.round(y / GRID);
-  const idx = ((((gx % 4) + 4) % 4) + (((gy % 4) + 4) % 4)) % 4;
-  const types: NodeType[] = ["text", "audio", "drawing", "photo"];
+  const idx = ((((gx % 7) + 7) % 7) + (((gy % 7) + 7) % 7)) % 7;
+  const types: NodeType[] = ["prompt", "rhythm", "drawing", "riddle", "puzzle", "memory", "wire"];
   return types[idx];
 }
 
@@ -118,36 +140,12 @@ const COLOR_CYCLE: WireColor[] = [
 /* ───── Song chip positions (aligned to 40px grid) ───── */
 
 const SONGS: SongChip[] = [
-  { id: 1, label: "de(A)d ins(I)de", x: 0, y: 0, audioSrc: "songs/dead.mp3" },
-  {
-    id: 2,
-    label: "de[AR] sinner",
-    x: -480,
-    y: -480,
-    audioSrc: "songs/sinner.mp3",
-  },
-  { id: 3, label: "r{IT}ual", x: 480, y: -480, audioSrc: "songs/ritual.mp3" },
-  {
-    id: 4,
-    label: "adam & /AI/ve",
-    x: -480,
-    y: 480,
-    audioSrc: "songs/adam.mp3",
-  },
-  {
-    id: 5,
-    label: "samur<AI/> protocol",
-    x: 480,
-    y: 480,
-    audioSrc: "songs/samurai.mp3",
-  },
-  {
-    id: 6,
-    label: "r<AI/>sing",
-    x: 0,
-    y: -480,
-    audioSrc: "songs/AdultPanda.wav",
-  },
+  { id: 1, label: "de(A)d ins(I)de", x: 0, y: 0, audioSrc: "songs/dead.mp3", puzzleImage: "puzzleImages/dead.jpg" },
+  { id: 2, label: "de[AR] sinner", x: -480, y: -480, audioSrc: "songs/sinner.mp3", puzzleImage: "puzzleImages/sinner.jpg" },
+  { id: 3, label: "r{IT}ual", x: 480, y: -480, audioSrc: "songs/ritual.mp3", puzzleImage: "puzzleImages/ritual.jpg" },
+  { id: 4, label: "adam & /AI/ve", x: -480, y: 480, audioSrc: "songs/adam.mp3", puzzleImage: "puzzleImages/adam.jpg" },
+  { id: 5, label: "samur<AI/> protocol", x: 480, y: 480, audioSrc: "songs/samurai.mp3", puzzleImage: "puzzleImages/samurai.jpg" },
+  { id: 6, label: "r<AI/>sing", x: 0, y: -480, audioSrc: "songs/AdultPanda.wav" },
   { id: 7, label: "effes", x: 0, y: 480, audioSrc: "songs/effes.mp3" },
   { id: 8, label: "pizda", x: -480, y: 0, audioSrc: "songs/Pizda.mp3" },
   { id: 9, label: "doshik", x: 480, y: 0, audioSrc: "songs/Doshik.mp3" },
@@ -339,29 +337,32 @@ export default function Board() {
       ],
       reviews: [
         {
-          type: "text",
+          type: "prompt",
           name: "Alex",
-          text: "This beat is absolutely fire, love the bass line!",
+          prompt: "Describe this song in 3 words",
+          text: "Dark, raw, electric",
         },
         {
-          type: "text",
+          type: "riddle",
           name: "Maria",
-          text: "Reminds me of summer nights, beautiful vibes",
+          correct: true,
         },
         {
-          type: "text",
+          type: "prompt",
           name: "DJ_K",
-          text: "The synth work here is next level production",
+          prompt: "What color is this track?",
+          text: "Deep crimson with neon green edges",
         },
         {
-          type: "text",
+          type: "riddle",
           name: "Luna",
-          text: "Been playing this on repeat all week long",
+          correct: false,
         },
         {
-          type: "text",
+          type: "prompt",
           name: "Max",
-          text: "One of the best tracks I have heard this year",
+          prompt: "In what movie could this track play?",
+          text: "The Matrix, definitely the lobby scene",
         },
       ],
     },
@@ -801,7 +802,7 @@ export default function Board() {
       if (dragMoved.current) return;
       if (skipReview) {
         // Place node directly without review
-        const review: Review = { type: "text", name: "dev", text: "—" };
+        const review: Review = { type: "prompt", name: "dev", prompt: "—", text: "—" };
         if (buildingFromChip !== null) {
           const color = COLOR_CYCLE[paths.length % COLOR_CYCLE.length];
           const newPath: PathData = {
@@ -840,11 +841,15 @@ export default function Board() {
           }
         }
       } else {
+        const chipId = buildingFromChip ?? (activePathIdx !== null ? paths[activePathIdx]?.sourceChipId : null);
+        const chip = chipId != null ? SONGS.find((s) => s.id === chipId) : undefined;
         setPendingGhost({
           x: gx,
           y: gy,
           unlocks,
           nodeType: getNodeTypeForPosition(gx, gy),
+          audioSrc: chip?.audioSrc,
+          puzzleImage: chip?.puzzleImage,
         });
       }
     },
@@ -1071,6 +1076,8 @@ export default function Board() {
         <ReviewPopup
           songName={pendingSongName}
           nodeType={pendingGhost.nodeType}
+          audioSrc={pendingGhost.audioSrc}
+          puzzleImage={pendingGhost.puzzleImage}
           onSubmit={(review: Review) => handleReviewSubmit(review)}
           onClose={() => setPendingGhost(null)}
         />
@@ -1329,85 +1336,74 @@ function PathSVG({
               filter={`url(#glow-${path.color})`}
             />
             {/* Type indicator icons */}
-            {reviewType === "audio" && (
+            {reviewType === "prompt" && (
+              <text
+                x={n.x}
+                y={n.y + 3}
+                textAnchor="middle"
+                fontSize={8}
+                fill="#000"
+                fontFamily="monospace"
+                fontWeight="bold"
+                opacity={0.85}
+              >
+                ?
+              </text>
+            )}
+            {reviewType === "rhythm" && (
               <g opacity={0.85}>
-                {/* 3 waveform bars */}
-                <rect
-                  x={n.x - 3}
-                  y={n.y - 2}
-                  width={1.5}
-                  height={4}
-                  rx={0.5}
-                  fill="#000"
-                />
-                <rect
-                  x={n.x - 0.75}
-                  y={n.y - 3.5}
-                  width={1.5}
-                  height={7}
-                  rx={0.5}
-                  fill="#000"
-                />
-                <rect
-                  x={n.x + 1.5}
-                  y={n.y - 1.5}
-                  width={1.5}
-                  height={3}
-                  rx={0.5}
-                  fill="#000"
-                />
+                {/* Rhythm bars */}
+                <rect x={n.x - 3.5} y={n.y - 1} width={1.2} height={4} rx={0.4} fill="#000" />
+                <rect x={n.x - 1.5} y={n.y - 3} width={1.2} height={6} rx={0.4} fill="#000" />
+                <rect x={n.x + 0.5} y={n.y - 2} width={1.2} height={5} rx={0.4} fill="#000" />
+                <rect x={n.x + 2.3} y={n.y} width={1.2} height={3} rx={0.4} fill="#000" />
               </g>
             )}
             {reviewType === "drawing" && (
               <g opacity={0.85}>
                 {/* 2x2 pixel grid */}
-                <rect
-                  x={n.x - 2.5}
-                  y={n.y - 2.5}
-                  width={2}
-                  height={2}
-                  fill="#000"
-                />
-                <rect
-                  x={n.x + 0.5}
-                  y={n.y - 2.5}
-                  width={2}
-                  height={2}
-                  fill="#000"
-                  opacity={0.5}
-                />
-                <rect
-                  x={n.x - 2.5}
-                  y={n.y + 0.5}
-                  width={2}
-                  height={2}
-                  fill="#000"
-                  opacity={0.5}
-                />
-                <rect
-                  x={n.x + 0.5}
-                  y={n.y + 0.5}
-                  width={2}
-                  height={2}
-                  fill="#000"
-                />
+                <rect x={n.x - 2.5} y={n.y - 2.5} width={2} height={2} fill="#000" />
+                <rect x={n.x + 0.5} y={n.y - 2.5} width={2} height={2} fill="#000" opacity={0.5} />
+                <rect x={n.x - 2.5} y={n.y + 0.5} width={2} height={2} fill="#000" opacity={0.5} />
+                <rect x={n.x + 0.5} y={n.y + 0.5} width={2} height={2} fill="#000" />
               </g>
             )}
-            {reviewType === "photo" && (
+            {reviewType === "riddle" && (
+              <text
+                x={n.x}
+                y={n.y + 3}
+                textAnchor="middle"
+                fontSize={7}
+                fill="#000"
+                fontFamily="monospace"
+                fontWeight="bold"
+                opacity={0.85}
+              >
+                ?!
+              </text>
+            )}
+            {reviewType === "puzzle" && (
               <g opacity={0.85}>
-                {/* Tiny camera/frame icon */}
-                <rect
-                  x={n.x - 3}
-                  y={n.y - 2}
-                  width={6}
-                  height={4}
-                  rx={0.5}
-                  fill="none"
-                  stroke="#000"
-                  strokeWidth={0.8}
-                />
-                <circle cx={n.x} cy={n.y} r={1.2} fill="#000" />
+                <rect x={n.x - 2.5} y={n.y - 2.5} width={2} height={2} rx={0.3} fill="#000" />
+                <rect x={n.x + 0.5} y={n.y - 2.5} width={2} height={2} rx={0.3} fill="#000" opacity={0.5} />
+                <rect x={n.x - 2.5} y={n.y + 0.5} width={2} height={2} rx={0.3} fill="#000" opacity={0.5} />
               </g>
+            )}
+            {reviewType === "memory" && (
+              <g opacity={0.85}>
+                <rect x={n.x - 2.5} y={n.y - 2} width={2} height={3} rx={0.3} fill="#000" />
+                <rect x={n.x + 0.5} y={n.y - 2} width={2} height={3} rx={0.3} fill="#000" opacity={0.5} />
+              </g>
+            )}
+            {reviewType === "wire" && (
+              <path
+                d={`M ${n.x - 3} ${n.y + 1} Q ${n.x} ${n.y - 3}, ${n.x + 3} ${n.y}`}
+                fill="none"
+                stroke="#000"
+                strokeWidth={1}
+                strokeLinecap="round"
+                opacity={0.85}
+              />
             )}
             {/* Clickable hit area for every node */}
             <circle
@@ -1515,83 +1511,71 @@ function GhostNode({
 
       {/* Type hint icon */}
       <g opacity={0.7} style={{ pointerEvents: "none" }}>
-        {nodeType === "text" && (
+        {nodeType === "prompt" && (
           <text
             x={x}
-            y={y + 3}
+            y={y + 4}
+            textAnchor="middle"
+            fontSize={12}
+            fill={color}
+            fontFamily="monospace"
+            fontWeight="bold"
+          >
+            ?
+          </text>
+        )}
+        {nodeType === "rhythm" && (
+          <>
+            <rect x={x - 4.5} y={y - 1} width={2} height={5} rx={0.5} fill={color} />
+            <rect x={x - 1.5} y={y - 4} width={2} height={8} rx={0.5} fill={color} />
+            <rect x={x + 1.5} y={y - 2.5} width={2} height={6} rx={0.5} fill={color} />
+          </>
+        )}
+        {nodeType === "drawing" && (
+          <>
+            <rect x={x - 3.5} y={y - 3.5} width={3} height={3} fill={color} />
+            <rect x={x + 0.5} y={y - 3.5} width={3} height={3} fill={color} opacity={0.5} />
+            <rect x={x - 3.5} y={y + 0.5} width={3} height={3} fill={color} opacity={0.5} />
+            <rect x={x + 0.5} y={y + 0.5} width={3} height={3} fill={color} />
+          </>
+        )}
+        {nodeType === "riddle" && (
+          <text
+            x={x}
+            y={y + 4}
             textAnchor="middle"
             fontSize={10}
             fill={color}
             fontFamily="monospace"
             fontWeight="bold"
           >
-            T
+            ?!
           </text>
         )}
-        {nodeType === "audio" && (
+        {nodeType === "puzzle" && (
           <>
-            <rect
-              x={x - 4}
-              y={y - 2.5}
-              width={2}
-              height={5}
-              rx={0.5}
-              fill={color}
-            />
-            <rect
-              x={x - 1}
-              y={y - 4.5}
-              width={2}
-              height={9}
-              rx={0.5}
-              fill={color}
-            />
-            <rect
-              x={x + 2}
-              y={y - 1.5}
-              width={2}
-              height={3}
-              rx={0.5}
-              fill={color}
-            />
+            <rect x={x - 4} y={y - 4} width={3.5} height={3.5} rx={0.5} fill={color} />
+            <rect x={x + 0.5} y={y - 4} width={3.5} height={3.5} rx={0.5} fill={color} opacity={0.6} />
+            <rect x={x - 4} y={y + 0.5} width={3.5} height={3.5} rx={0.5} fill={color} opacity={0.6} />
+            <rect x={x + 0.5} y={y + 0.5} width={3.5} height={3.5} rx={0.5} fill="none" stroke={color} strokeWidth={0.8} strokeDasharray="1.5 1" />
           </>
         )}
-        {nodeType === "drawing" && (
+        {nodeType === "memory" && (
           <>
-            <rect x={x - 3.5} y={y - 3.5} width={3} height={3} fill={color} />
-            <rect
-              x={x + 0.5}
-              y={y - 3.5}
-              width={3}
-              height={3}
-              fill={color}
-              opacity={0.5}
-            />
-            <rect
-              x={x - 3.5}
-              y={y + 0.5}
-              width={3}
-              height={3}
-              fill={color}
-              opacity={0.5}
-            />
-            <rect x={x + 0.5} y={y + 0.5} width={3} height={3} fill={color} />
+            <rect x={x - 4} y={y - 3.5} width={3.5} height={5} rx={0.5} fill={color} />
+            <rect x={x + 0.5} y={y - 3.5} width={3.5} height={5} rx={0.5} fill={color} opacity={0.5} />
+            <text x={x - 2.2} y={y + 0.5} fontSize={3.5} fill="#000" textAnchor="middle" fontWeight="bold">?</text>
+            <text x={x + 2.2} y={y + 0.5} fontSize={3.5} fill="#000" textAnchor="middle" fontWeight="bold">?</text>
           </>
         )}
-        {nodeType === "photo" && (
-          <>
-            <rect
-              x={x - 4.5}
-              y={y - 3}
-              width={9}
-              height={6}
-              rx={1}
-              fill="none"
-              stroke={color}
-              strokeWidth={1}
-            />
-            <circle cx={x} cy={y} r={2} fill={color} />
-          </>
+        {nodeType === "wire" && (
+          <path
+            d={`M ${x - 5} ${y + 2} Q ${x - 2} ${y - 4}, ${x + 1} ${y} Q ${x + 3} ${y + 3}, ${x + 5} ${y - 1}`}
+            fill="none"
+            stroke={color}
+            strokeWidth={1.5}
+            strokeLinecap="round"
+          />
         )}
       </g>
 
@@ -1949,9 +1933,6 @@ function ReviewViewer({
   review: Review;
   onClose: () => void;
 }) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -1959,33 +1940,23 @@ function ReviewViewer({
     window.addEventListener("keydown", handler);
     return () => {
       window.removeEventListener("keydown", handler);
-      audioRef.current?.pause();
     };
   }, [onClose]);
 
-  const toggleAudio = () => {
-    if (review.type !== "audio") return;
-    if (isPlaying && audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      setIsPlaying(false);
-    } else {
-      const audio = new Audio(review.audioUrl);
-      audioRef.current = audio;
-      audio.onended = () => setIsPlaying(false);
-      audio.play();
-      setIsPlaying(true);
-    }
-  };
-
   const typeLabel =
-    review.type === "text"
-      ? "Review"
-      : review.type === "audio"
-        ? "Voice note"
+    review.type === "prompt"
+      ? "Answer"
+      : review.type === "rhythm"
+        ? "Rhythm pattern"
         : review.type === "drawing"
           ? "Pixel art"
-          : "Photo";
+          : review.type === "riddle"
+            ? "Riddle"
+            : review.type === "puzzle"
+              ? "Puzzle"
+              : review.type === "memory"
+                ? "Memory game"
+                : "Wire trace";
 
   return (
     <div
@@ -2052,83 +2023,84 @@ function ReviewViewer({
         </div>
 
         {/* Content by type */}
-        {review.type === "text" && (
-          <div
-            style={{
-              fontSize: 14,
-              fontFamily: "monospace",
-              color: "#d0d0d0",
-              lineHeight: 1.6,
-              padding: "12px 14px",
-              background: "rgba(0,0,0,0.25)",
-              border: "1px solid rgba(34,197,94,0.1)",
-              borderRadius: 8,
-            }}
-          >
-            "{review.text}"
+        {review.type === "prompt" && (
+          <div>
+            <div
+              style={{
+                fontSize: 12,
+                fontFamily: "monospace",
+                color: "#f5c542",
+                padding: "8px 12px",
+                background: "rgba(245,197,66,0.06)",
+                border: "1px solid rgba(245,197,66,0.12)",
+                borderRadius: "8px 8px 0 0",
+                borderBottom: "none",
+              }}
+            >
+              {review.prompt}
+            </div>
+            <div
+              style={{
+                fontSize: 14,
+                fontFamily: "monospace",
+                color: "#d0d0d0",
+                lineHeight: 1.6,
+                padding: "12px 14px",
+                background: "rgba(0,0,0,0.25)",
+                border: "1px solid rgba(34,197,94,0.1)",
+                borderRadius: "0 0 8px 8px",
+              }}
+            >
+              "{review.text}"
+            </div>
           </div>
         )}
 
-        {review.type === "audio" && (
+        {review.type === "rhythm" && (
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
               padding: "14px 16px",
               background: "rgba(0,0,0,0.25)",
               border: "1px solid rgba(34,197,94,0.1)",
               borderRadius: 8,
             }}
           >
-            <button
-              onClick={toggleAudio}
+            <div
               style={{
-                width: 40,
                 height: 40,
-                borderRadius: "50%",
-                background: isPlaying
-                  ? "rgba(34,197,94,0.2)"
-                  : "rgba(245,197,66,0.15)",
-                border: `1px solid ${isPlaying ? "rgba(34,197,94,0.4)" : "rgba(245,197,66,0.3)"}`,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
+                position: "relative",
+                background: "rgba(0,0,0,0.2)",
+                borderRadius: 6,
+                overflow: "hidden",
               }}
             >
-              {isPlaying ? (
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="#22c55e">
-                  <rect x="1" y="1" width="4" height="12" rx="1" />
-                  <rect x="9" y="1" width="4" height="12" rx="1" />
-                </svg>
-              ) : (
-                <svg width="14" height="16" viewBox="0 0 14 16" fill="#f5c542">
-                  <path d="M2 1L12 8L2 15V1Z" />
-                </svg>
-              )}
-            </button>
-            <div>
-              <div
-                style={{
-                  fontSize: 12,
-                  fontFamily: "monospace",
-                  color: isPlaying ? "#22c55e" : "#d0d0d0",
-                }}
-              >
-                {isPlaying ? "Playing..." : "Voice message"}
-              </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontFamily: "monospace",
-                  color: "rgba(255,255,255,0.3)",
-                  marginTop: 2,
-                }}
-              >
-                {(review.durationMs / 1000).toFixed(1)}s
-              </div>
+              {review.taps.map((t, i) => (
+                <div
+                  key={i}
+                  style={{
+                    position: "absolute",
+                    left: `${(t / review.duration) * 100}%`,
+                    top: "50%",
+                    transform: "translate(-50%, -50%)",
+                    width: 5,
+                    height: 20,
+                    background: "#f5c542",
+                    borderRadius: 2,
+                    opacity: 0.8,
+                  }}
+                />
+              ))}
+            </div>
+            <div
+              style={{
+                marginTop: 8,
+                fontSize: 11,
+                fontFamily: "monospace",
+                color: "rgba(255,255,255,0.3)",
+                textAlign: "center",
+              }}
+            >
+              {review.taps.length} taps · {(review.duration / 1000).toFixed(0)}s
             </div>
           </div>
         )}
@@ -2150,18 +2122,95 @@ function ReviewViewer({
           </div>
         )}
 
-        {review.type === "photo" && (
-          <div style={{ textAlign: "center" }}>
-            <img
-              src={review.imageDataUrl}
-              alt="Photo"
+        {review.type === "riddle" && (
+          <div
+            style={{
+              padding: "16px",
+              background: "rgba(0,0,0,0.25)",
+              border: "1px solid rgba(34,197,94,0.1)",
+              borderRadius: 8,
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: 32, marginBottom: 8 }}>{review.correct ? "🧠" : "❌"}</div>
+            <div
               style={{
-                maxWidth: "100%",
-                maxHeight: 260,
-                borderRadius: 8,
-                border: "1px solid rgba(34,197,94,0.15)",
+                fontSize: 14,
+                fontFamily: "monospace",
+                color: review.correct ? "#22c55e" : "#ff3b5c",
               }}
-            />
+            >
+              {review.correct ? "Guessed correctly!" : "Wrong answer"}
+            </div>
+          </div>
+        )}
+
+        {review.type === "puzzle" && (
+          <div
+            style={{
+              padding: "16px",
+              background: "rgba(0,0,0,0.25)",
+              border: "1px solid rgba(34,197,94,0.1)",
+              borderRadius: 8,
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: 32, marginBottom: 8 }}>🧩</div>
+            <div
+              style={{
+                fontSize: 14,
+                fontFamily: "monospace",
+                color: "#d0d0d0",
+              }}
+            >
+              Solved in <span style={{ color: "#f5c542" }}>{review.moves}</span> moves
+            </div>
+          </div>
+        )}
+
+        {review.type === "memory" && (
+          <div
+            style={{
+              padding: "16px",
+              background: "rgba(0,0,0,0.25)",
+              border: "1px solid rgba(34,197,94,0.1)",
+              borderRadius: 8,
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: 32, marginBottom: 8 }}>🃏</div>
+            <div
+              style={{
+                fontSize: 14,
+                fontFamily: "monospace",
+                color: "#d0d0d0",
+              }}
+            >
+              Solved in <span style={{ color: "#f5c542" }}>{review.flips}</span> flips
+            </div>
+          </div>
+        )}
+
+        {review.type === "wire" && (
+          <div
+            style={{
+              padding: "16px",
+              background: "rgba(0,0,0,0.25)",
+              border: "1px solid rgba(34,197,94,0.1)",
+              borderRadius: 8,
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: 32, marginBottom: 8 }}>⚡</div>
+            <div
+              style={{
+                fontSize: 14,
+                fontFamily: "monospace",
+                color: "#d0d0d0",
+              }}
+            >
+              Connected in <span style={{ color: "#f5c542" }}>{review.lines}</span> lines
+            </div>
           </div>
         )}
       </div>
