@@ -2,11 +2,11 @@ import { useState, useCallback, useRef, useEffect } from "react";
 
 const WIDTH = 330;
 const HEIGHT = 220;
-const DOT_COUNT = 7;
 const DOT_RADIUS = 10;
 const HIT_RADIUS = 20;
 
 interface WireTraceProps {
+  difficulty?: number;
   onSolved: (lines: number) => void;
 }
 
@@ -34,7 +34,7 @@ function segIntersectionPt(a: Pt, b: Pt, c: Pt, d: Pt): Pt | null {
 /** Check if a polyline (trail) intersects any segment of existing lines,
  *  ignoring intersections that happen inside a dot's radius */
 function trailIntersectsLines(trail: Pt[], existingLines: Pt[][], dots: Pt[]): boolean {
-  const safeRadius = DOT_RADIUS + 6;
+  const safeRadius = DOT_RADIUS + 2;
   for (let t = 0; t < trail.length - 1; t++) {
     const a = trail[t];
     const b = trail[t + 1];
@@ -49,11 +49,11 @@ function trailIntersectsLines(trail: Pt[], existingLines: Pt[][], dots: Pt[]): b
 }
 
 /** Generate dots that are spread apart */
-function generateDots(): Pt[] {
+function generateDots(count: number): Pt[] {
   const pad = 25;
-  const minDist = 55;
+  const minDist = count > 7 ? 40 : 55;
   const dots: Pt[] = [];
-  for (let attempts = 0; dots.length < DOT_COUNT && attempts < 500; attempts++) {
+  for (let attempts = 0; dots.length < count && attempts < 500; attempts++) {
     const p = {
       x: pad + Math.random() * (WIDTH - 2 * pad),
       y: pad + Math.random() * (HEIGHT - 2 * pad),
@@ -62,7 +62,7 @@ function generateDots(): Pt[] {
       dots.push(p);
     }
   }
-  while (dots.length < DOT_COUNT) {
+  while (dots.length < count) {
     const i = dots.length;
     dots.push({
       x: pad + ((i * 43) % (WIDTH - 2 * pad)),
@@ -79,8 +79,9 @@ function ptsToPath(pts: Pt[]): string {
   return d;
 }
 
-export default function WireTrace({ onSolved }: WireTraceProps) {
-  const [dots] = useState(() => generateDots());
+export default function WireTrace({ difficulty = 0, onSolved }: WireTraceProps) {
+  const dotCount = 4 + Math.round(difficulty * 6);
+  const [dots] = useState(() => generateDots(dotCount));
   const [drawnLines, setDrawnLines] = useState<{ from: number; to: number; trail: Pt[] }[]>([]);
   const [currentTrail, setCurrentTrail] = useState<Pt[]>([]);
   const [fromDot, setFromDot] = useState<number | null>(null);
@@ -97,7 +98,7 @@ export default function WireTrace({ onSolved }: WireTraceProps) {
     connectedDots.add(l.from);
     connectedDots.add(l.to);
   }
-  const totalLines = DOT_COUNT - 1;
+  const totalLines = dotCount - 1;
 
   const getPos = useCallback(
     (e: React.MouseEvent | React.TouchEvent): Pt | null => {
@@ -156,7 +157,13 @@ export default function WireTrace({ onSolved }: WireTraceProps) {
       e.preventDefault();
       const pos = getPos(e);
       if (!pos) return;
-      setCurrentTrail((prev) => [...prev, pos]);
+      setCurrentTrail((prev) => {
+        if (prev.length > 0) {
+          const last = prev[prev.length - 1];
+          if (Math.hypot(pos.x - last.x, pos.y - last.y) < 3) return prev;
+        }
+        return [...prev, pos];
+      });
       setHoverDot(findDotAt(pos));
     },
     [getPos, findDotAt],
@@ -207,7 +214,7 @@ export default function WireTrace({ onSolved }: WireTraceProps) {
       connected.add(l.from);
       connected.add(l.to);
     }
-    if (connected.size === DOT_COUNT && newLines.length >= totalLines) {
+    if (connected.size === dotCount && newLines.length >= totalLines) {
       setSolved(true);
       onSolved(newLines.length);
     }

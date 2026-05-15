@@ -89,6 +89,7 @@ interface PendingGhost {
   nodeType: NodeType;
   audioSrc?: string;
   puzzleImage?: string;
+  difficulty: number;
 }
 
 /** Deterministic node type from grid coordinates (checkerboard pattern) */
@@ -851,6 +852,7 @@ export default function Board() {
           nodeType: getNodeTypeForPosition(gx, gy),
           audioSrc: chip?.audioSrc,
           puzzleImage: chip?.puzzleImage,
+          difficulty: Math.min(1, Math.hypot(gx, gy) / 700),
         });
       }
     },
@@ -1028,42 +1030,7 @@ export default function Board() {
             ))}
           </defs>
 
-          {/* Socket connectors at chip anchors (rendered BEFORE paths so nodes appear on top) */}
-          <defs>
-            <radialGradient id="socket-glow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#dc2626" stopOpacity={0.15} />
-              <stop offset="100%" stopColor="#dc2626" stopOpacity={0} />
-            </radialGradient>
-          </defs>
-          {SONGS.map((song) =>
-            song.id !== 1 &&
-            getChipAnchors(song).map((anchor, i) => {
-              const dx = anchor.x - song.x;
-              const dy = anchor.y - song.y;
-              const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-              const active = unlockedChips.has(song.id);
-              return (
-                <g
-                  key={`socket-${song.id}-${i}`}
-                  transform={`translate(${anchor.x}, ${anchor.y}) rotate(${angle})`}
-                  opacity={active ? 1 : 0.3}
-                >
-                  {/* Outer arc */}
-                  <path
-                    d="M 3,-11 A 11,11 0 1,0 3,11"
-                    fill="none"
-                    stroke="#7a2a2a"
-                    strokeWidth={2}
-                  />
-                  {/* Inner cavity */}
-                  <path
-                    d="M 2,-7 A 7,7 0 1,0 2,7"
-                    fill="#0a0606"
-                  />
-                </g>
-              );
-            }),
-          )}
+          {/* Socket connectors temporarily disabled */}
 
           {/* Rendered paths (on top of sockets so nodes overlap them) */}
           {paths.map((path, idx) => (
@@ -1117,6 +1084,7 @@ export default function Board() {
           nodeType={pendingGhost.nodeType}
           audioSrc={pendingGhost.audioSrc}
           puzzleImage={pendingGhost.puzzleImage}
+          difficulty={pendingGhost.difficulty}
           onSubmit={(review: Review) => handleReviewSubmit(review)}
           onClose={() => setPendingGhost(null)}
         />

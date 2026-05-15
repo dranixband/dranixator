@@ -37,30 +37,45 @@ function buildDeck(): Card[] {
 }
 
 interface MemoryGameProps {
+  difficulty?: number;
   onSolved: (flips: number) => void;
 }
 
-export default function MemoryGame({ onSolved }: MemoryGameProps) {
-  const [cards] = useState<Card[]>(() => buildDeck());
+export default function MemoryGame({ difficulty = 0, onSolved }: MemoryGameProps) {
+  const maxFlips = 24 - Math.round(difficulty * 12);
+  const [cards, setCards] = useState<Card[]>(() => buildDeck());
   const [flipped, setFlipped] = useState<Set<number>>(new Set());
   const [matched, setMatched] = useState<Set<number>>(new Set());
   const [flips, setFlips] = useState(0);
   const [solved, setSolved] = useState(false);
+  const [failed, setFailed] = useState(false);
   const lockRef = useRef(false);
 
   // Pick 4 images for this game session
-  const [images] = useState(() => shuffle(ALL_IMAGES).slice(0, PAIR_COUNT));
+  const [images, setImages] = useState(() => shuffle(ALL_IMAGES).slice(0, PAIR_COUNT));
   const base = import.meta.env.BASE_URL;
+
+  const resetGame = useCallback(() => {
+    setCards(buildDeck());
+    setImages(shuffle(ALL_IMAGES).slice(0, PAIR_COUNT));
+    setFlipped(new Set());
+    setMatched(new Set());
+    setFlips(0);
+    setSolved(false);
+    setFailed(false);
+    lockRef.current = false;
+  }, []);
 
   const handleFlip = useCallback(
     (idx: number) => {
-      if (lockRef.current || solved) return;
+      if (lockRef.current || solved || failed) return;
       if (flipped.has(idx) || matched.has(idx)) return;
 
+      const newFlips = flips + 1;
       const newFlipped = new Set(flipped);
       newFlipped.add(idx);
       setFlipped(newFlipped);
-      setFlips((f) => f + 1);
+      setFlips(newFlips);
 
       // If this is the second card flipped
       const openCards = [...newFlipped].filter((i) => !matched.has(i));
@@ -76,7 +91,7 @@ export default function MemoryGame({ onSolved }: MemoryGameProps) {
               next.add(b);
               if (next.size === TOTAL) {
                 setSolved(true);
-                onSolved(flips + 1); // +1 because setFlips hasn't applied yet in this closure
+                onSolved(newFlips);
               }
               return next;
             });
@@ -88,11 +103,22 @@ export default function MemoryGame({ onSolved }: MemoryGameProps) {
           setTimeout(() => {
             setFlipped(new Set());
             lockRef.current = false;
+            // Check flip limit after flipping back
+            if (newFlips >= maxFlips) {
+              setFailed(true);
+            }
           }, FLIP_DELAY);
         }
+      } else if (newFlips >= maxFlips) {
+        // Single card flipped and limit reached — fail after brief delay
+        lockRef.current = true;
+        setTimeout(() => {
+          setFailed(true);
+          lockRef.current = false;
+        }, FLIP_DELAY);
       }
     },
-    [flipped, matched, cards, flips, solved, onSolved],
+    [flipped, matched, cards, flips, solved, failed, onSolved],
   );
 
   // Preload images
@@ -221,20 +247,45 @@ export default function MemoryGame({ onSolved }: MemoryGameProps) {
           fontFamily: "monospace",
         }}
       >
-        <span style={{ color: "rgba(255,255,255,0.3)" }}>
-          Flips: {flips}
+        <span style={{ color: failed ? "#ff3b5c" : "rgba(255,255,255,0.3)" }}>
+          Flips: {flips}/{maxFlips}
         </span>
         <span style={{ color: "rgba(255,255,255,0.3)" }}>
           Pairs: {matched.size / 2}/{PAIR_COUNT}
         </span>
         <span
           style={{
-            color: solved ? "rgba(34,197,94,0.7)" : "rgba(255,255,255,0.2)",
+            color: solved ? "rgba(34,197,94,0.7)" : failed ? "#ff3b5c" : "rgba(255,255,255,0.2)",
           }}
         >
-          {solved ? "Solved!" : "Find all pairs"}
+          {solved ? "Solved!" : failed ? "Out of flips!" : "Find all pairs"}
         </span>
       </div>
+
+      {failed && (
+        <button
+          type="button"
+          onClick={resetGame}
+          style={{
+            display: "block",
+            margin: "12px auto 0",
+            padding: "8px 20px",
+            fontSize: 12,
+            fontFamily: "monospace",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: 1,
+            color: "#f5c542",
+            background: "rgba(245,197,66,0.08)",
+            border: "1px solid rgba(245,197,66,0.3)",
+            borderRadius: 6,
+            cursor: "pointer",
+            transition: "all 0.2s",
+          }}
+        >
+          Try again
+        </button>
+      )}
     </div>
   );
 }

@@ -33,6 +33,7 @@ interface ReviewPopupProps {
   nodeType: NodeType;
   audioSrc?: string;
   puzzleImage?: string;
+  difficulty?: number;
   onSubmit: (review: Review) => void;
   onClose: () => void;
 }
@@ -52,6 +53,7 @@ export default function ReviewPopup({
   nodeType,
   audioSrc,
   puzzleImage,
+  difficulty = 0,
   onSubmit,
   onClose,
 }: ReviewPopupProps) {
@@ -219,6 +221,7 @@ export default function ReviewPopup({
         ref={cardRef}
         className="review-popup-enter"
         style={{
+          position: "relative",
           width: 380,
           maxHeight: "90vh",
           overflowY: "auto",
@@ -236,6 +239,44 @@ export default function ReviewPopup({
         }}
         onMouseDown={(e) => e.stopPropagation()}
       >
+        {/* Close button */}
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            width: 28,
+            height: 28,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: 6,
+            color: "rgba(255,255,255,0.4)",
+            fontSize: 16,
+            fontFamily: "monospace",
+            cursor: "pointer",
+            transition: "all 0.2s",
+            padding: 0,
+            lineHeight: 1,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(255,59,92,0.15)";
+            e.currentTarget.style.borderColor = "rgba(255,59,92,0.3)";
+            e.currentTarget.style.color = "#ff3b5c";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
+            e.currentTarget.style.color = "rgba(255,255,255,0.4)";
+          }}
+        >
+          &times;
+        </button>
+
         {/* Header */}
         <div style={{ marginBottom: 16 }}>
           <div
@@ -509,7 +550,7 @@ export default function ReviewPopup({
               >
                 Memory game
               </label>
-              <MemoryGame onSolved={(flips) => setMemoryFlips(flips)} />
+              <MemoryGame difficulty={difficulty} onSolved={(flips) => setMemoryFlips(flips)} />
             </div>
           )}
 
@@ -529,7 +570,7 @@ export default function ReviewPopup({
               >
                 Wire trace
               </label>
-              <WireTrace onSolved={(l) => setWireLines(l)} />
+              <WireTrace difficulty={difficulty} onSolved={(l) => setWireLines(l)} />
             </div>
           )}
 
