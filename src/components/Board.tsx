@@ -95,8 +95,8 @@ interface PendingGhost {
 function getNodeTypeForPosition(x: number, y: number): NodeType {
   const gx = Math.round(x / GRID);
   const gy = Math.round(y / GRID);
-  const idx = ((((gx % 7) + 7) % 7) + (((gy % 7) + 7) % 7)) % 7;
-  const types: NodeType[] = ["prompt", "rhythm", "drawing", "riddle", "puzzle", "memory", "wire"];
+  const idx = ((((gx % 4) + 4) % 4) + (((gy % 4) + 4) % 4)) % 4;
+  const types: NodeType[] = [/* "prompt", */ /* "rhythm", */ /* "drawing", */ "riddle", "puzzle", "memory", "wire"];
   return types[idx];
 }
 
