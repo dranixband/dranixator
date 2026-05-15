@@ -1,11 +1,13 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import type { Review, NodeType } from "./Board";
+import type { SongLabel } from "../constants/songs";
 import PixelCanvas from "./PixelCanvas";
 import EmojiRiddle from "./EmojiRiddle";
 import RhythmTap from "./RhythmTap";
 import SlidingPuzzle from "./SlidingPuzzle";
 import MemoryGame from "./MemoryGame";
 import WireTrace from "./WireTrace";
+import WordScramble from "./WordScramble";
 
 const MIN_CHARS = 5;
 const MAX_CHARS = 150;
@@ -36,6 +38,7 @@ interface ReviewPopupProps {
   difficulty?: number;
   onSubmit: (review: Review) => void;
   onClose: () => void;
+  onPlayFragment?: (startTime: number, endTime: number) => void;
 }
 
 const NODE_TYPE_LABELS: Record<NodeType, string> = {
@@ -46,6 +49,7 @@ const NODE_TYPE_LABELS: Record<NodeType, string> = {
   puzzle: "Solve the puzzle",
   memory: "Find all pairs",
   wire: "Trace the wire",
+  wordScramble: "Unscramble lyrics",
 };
 
 export default function ReviewPopup({
@@ -56,6 +60,7 @@ export default function ReviewPopup({
   difficulty = 0,
   onSubmit,
   onClose,
+  onPlayFragment,
 }: ReviewPopupProps) {
   const [name, setName] = useState("");
   const cardRef = useRef<HTMLDivElement>(null);
@@ -89,6 +94,9 @@ export default function ReviewPopup({
   // Wire state
   const [wireLines, setWireLines] = useState<number | null>(null);
 
+  // WordScramble state
+  const [scrambleAttempts, setScrambleAttempts] = useState<number | null>(null);
+
   const charCount = text.length;
   const isTextValid = charCount >= MIN_CHARS && charCount <= MAX_CHARS;
   const isOverLimit = charCount > MAX_CHARS;
@@ -108,7 +116,9 @@ export default function ReviewPopup({
                 ? memoryFlips !== null
                 : nodeType === "wire"
                   ? wireLines !== null
-                  : false;
+                  : nodeType === "wordScramble"
+                    ? scrambleAttempts !== null
+                    : false;
 
   // Focus textarea for prompt
   useEffect(() => {
@@ -205,9 +215,18 @@ export default function ReviewPopup({
             });
           }
           break;
+        case "wordScramble":
+          if (scrambleAttempts !== null) {
+            onSubmit({
+              type: "wordScramble",
+              name: authorName,
+              attempts: scrambleAttempts,
+            });
+          }
+          break;
       }
     },
-    [name, text, nodeType, isValid, rhythmData, drawingDataUrl, riddleCorrect, puzzleMoves, memoryFlips, wireLines, currentPrompt, onSubmit],
+    [name, text, nodeType, isValid, rhythmData, drawingDataUrl, riddleCorrect, puzzleMoves, memoryFlips, wireLines, scrambleAttempts, currentPrompt, onSubmit],
   );
 
   return (
@@ -596,6 +615,31 @@ export default function ReviewPopup({
                 Wire trace
               </label>
               <WireTrace difficulty={difficulty} onSolved={(l) => setWireLines(l)} />
+            </div>
+          )}
+
+          {/* === WORD SCRAMBLE FORM === */}
+          {nodeType === "wordScramble" && (
+            <div style={{ marginBottom: 16 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  fontFamily: "monospace",
+                  color: "rgba(255,255,255,0.35)",
+                  marginBottom: 8,
+                  textTransform: "uppercase",
+                  letterSpacing: 1,
+                }}
+              >
+                Unscramble the lyrics
+              </label>
+              <WordScramble
+                difficulty={difficulty}
+                songLabel={songName as SongLabel}
+                onSolved={(attempts) => setScrambleAttempts(attempts)}
+                onPlayFragment={onPlayFragment}
+              />
             </div>
           )}
 

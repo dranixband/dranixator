@@ -11,7 +11,7 @@ import type { SongLabel } from "../constants/songs";
 
 type WireColor = "yellow" | "cyan" | "red" | "magenta" | "green" | "orange";
 
-export type NodeType = "prompt" | "rhythm" | "drawing" | "riddle" | "puzzle" | "memory" | "wire";
+export type NodeType = "prompt" | "rhythm" | "drawing" | "riddle" | "puzzle" | "memory" | "wire" | "wordScramble";
 
 interface SongChip {
   id: number;
@@ -72,7 +72,13 @@ interface WireReview {
   lines: number;
 }
 
-export type Review = PromptReview | RhythmReview | DrawingReview | RiddleReview | PuzzleReview | MemoryReview | WireReview;
+interface WordScrambleReview {
+  type: "wordScramble";
+  name: string;
+  attempts: number;
+}
+
+export type Review = PromptReview | RhythmReview | DrawingReview | RiddleReview | PuzzleReview | MemoryReview | WireReview | WordScrambleReview;
 
 interface PathData {
   sourceChipId: number;
@@ -96,8 +102,8 @@ interface PendingGhost {
 function getNodeTypeForPosition(x: number, y: number): NodeType {
   const gx = Math.round(x / GRID);
   const gy = Math.round(y / GRID);
-  const idx = ((((gx % 4) + 4) % 4) + (((gy % 4) + 4) % 4)) % 4;
-  const types: NodeType[] = [/* "prompt", */ /* "rhythm", */ /* "drawing", */ "riddle", "puzzle", "memory", "wire"];
+  const idx = ((((gx % 5) + 5) % 5) + (((gy % 5) + 5) % 5)) % 5;
+  const types: NodeType[] = [/* "prompt", */ /* "rhythm", */ /* "drawing", */ "riddle", "puzzle", "memory", "wire", "wordScramble"];
   return types[idx];
 }
 
@@ -550,6 +556,98 @@ export default function Board() {
     setAudioVolume(vol);
     if (audioRef.current) audioRef.current.volume = vol;
   }, []);
+
+  const fragmentTimerRef = useRef<number>(0);
+  const [isFragmentLocked, setIsFragmentLocked] = useState(false);
+
+  /** Play a timed fragment via the global player with 0.5s fade-in/out */
+  const playFragment = useCallback(
+    (chip: SongChip, startTime: number, endTime: number) => {
+      if (!chip.audioSrc) return;
+
+      // Stop previous
+      if (audioRef.current) {
+        audioRef.current.pause();
+        clearInterval(progressIntervalRef.current);
+      }
+      clearInterval(fragmentTimerRef.current);
+
+      const base = import.meta.env.BASE_URL;
+      const audio = new Audio(`${base}${chip.audioSrc}`);
+      audioRef.current = audio;
+      setPlayingChip(chip);
+      setAudioProgress(0);
+      setAudioDuration(0);
+      setIsFragmentLocked(true);
+
+      const FADE = 0.5;
+      const targetVol = audioVolume;
+
+      audio.currentTime = startTime;
+      audio.volume = 0;
+
+      const unlockAndRestore = () => {
+        setIsFragmentLocked(false);
+        if (audioRef.current === audio) {
+          audio.volume = targetVol;
+        }
+      };
+
+      audio.onloadedmetadata = () => {
+        setAudioDuration(audio.duration);
+        setAudioProgress(audio.currentTime);
+      };
+      audio.onended = () => {
+        setIsAudioPlaying(false);
+        clearInterval(progressIntervalRef.current);
+        clearInterval(fragmentTimerRef.current);
+        unlockAndRestore();
+      };
+
+      audio.play().catch(() => {});
+      setIsAudioPlaying(true);
+
+      // Progress tracking (normal global player interval)
+      progressIntervalRef.current = window.setInterval(() => {
+        if (audio) setAudioProgress(audio.currentTime);
+      }, 250);
+
+      // Fade-in/out + auto-stop on a faster interval
+      fragmentTimerRef.current = window.setInterval(() => {
+        if (!audioRef.current || audioRef.current !== audio) {
+          clearInterval(fragmentTimerRef.current);
+          return;
+        }
+        const elapsed = audio.currentTime - startTime;
+        const remaining = endTime - audio.currentTime;
+
+        if (remaining <= 0) {
+          // Restore volume before pausing so next play is normal
+          audio.volume = targetVol;
+          audio.pause();
+          setIsAudioPlaying(false);
+          clearInterval(progressIntervalRef.current);
+          clearInterval(fragmentTimerRef.current);
+          unlockAndRestore();
+          return;
+        }
+
+        // Fade in
+        if (elapsed < FADE) {
+          audio.volume = Math.min(targetVol, (elapsed / FADE) * targetVol);
+        }
+        // Fade out
+        else if (remaining < FADE) {
+          audio.volume = Math.max(0, (remaining / FADE) * targetVol);
+        }
+        // Normal
+        else if (audio.volume !== targetVol) {
+          audio.volume = targetVol;
+        }
+      }, 50);
+    },
+    [audioVolume],
+  );
 
   const closeAudio = useCallback(() => {
     if (audioRef.current) {
@@ -1099,6 +1197,11 @@ export default function Board() {
           difficulty={pendingGhost.difficulty}
           onSubmit={(review: Review) => handleReviewSubmit(review)}
           onClose={() => setPendingGhost(null)}
+          onPlayFragment={(startTime, endTime) => {
+            const chipId = buildingFromChip ?? (activePathIdx !== null ? paths[activePathIdx]?.sourceChipId : null);
+            const chip = chipId != null ? SONGS.find((s) => s.id === chipId) : undefined;
+            if (chip) playFragment(chip, startTime, endTime);
+          }}
         />
       )}
 
@@ -1231,6 +1334,7 @@ export default function Board() {
           progress={audioProgress}
           duration={audioDuration}
           volume={audioVolume}
+          locked={isFragmentLocked}
           onToggle={toggleAudioPlayback}
           onSeek={seekAudio}
           onVolumeChange={changeVolume}
@@ -1596,6 +1700,19 @@ function GhostNode({
             strokeWidth={1.5}
             strokeLinecap="round"
           />
+        )}
+        {nodeType === "wordScramble" && (
+          <text
+            x={x}
+            y={y + 4}
+            textAnchor="middle"
+            fontSize={10}
+            fill={color}
+            fontFamily="monospace"
+            fontWeight="bold"
+          >
+            Aa
+          </text>
         )}
       </g>
 
@@ -2279,6 +2396,7 @@ function AudioPlayerBar({
   progress,
   duration,
   volume,
+  locked = false,
   onToggle,
   onSeek,
   onVolumeChange,
@@ -2289,6 +2407,7 @@ function AudioPlayerBar({
   progress: number;
   duration: number;
   volume: number;
+  locked?: boolean;
   onToggle: () => void;
   onSeek: (fraction: number) => void;
   onVolumeChange: (vol: number) => void;
@@ -2304,6 +2423,7 @@ function AudioPlayerBar({
   };
 
   const handleSeek = (e: React.MouseEvent) => {
+    if (locked) return;
     const bar = barRef.current;
     if (!bar) return;
     const rect = bar.getBoundingClientRect();
@@ -2322,6 +2442,7 @@ function AudioPlayerBar({
   };
 
   const handleVolMouseDown = (e: React.MouseEvent) => {
+    if (locked) return;
     const f = volFractionFromEvent(e);
     if (f !== null) onVolumeChange(f);
 
@@ -2367,7 +2488,7 @@ function AudioPlayerBar({
           width: "100%",
           height: 3,
           background: "rgba(255,255,255,0.1)",
-          cursor: "pointer",
+          cursor: locked ? "default" : "pointer",
           marginBottom: 10,
           position: "relative",
         }}
@@ -2407,14 +2528,15 @@ function AudioPlayerBar({
       >
         {/* Play/Pause */}
         <button
-          onClick={onToggle}
+          onClick={locked ? undefined : onToggle}
           style={{
             width: 36,
             height: 36,
             borderRadius: "50%",
             background: "rgba(249,206,15,0.1)",
             border: "1px solid rgba(249,206,15,0.3)",
-            cursor: "pointer",
+            cursor: locked ? "default" : "pointer",
+            opacity: locked ? 0.4 : 1,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -2532,14 +2654,15 @@ function AudioPlayerBar({
 
         {/* Close */}
         <button
-          onClick={onClose}
+          onClick={locked ? undefined : onClose}
           style={{
             width: 28,
             height: 28,
             borderRadius: 4,
             background: "transparent",
             border: "1px solid rgba(255,255,255,0.1)",
-            cursor: "pointer",
+            cursor: locked ? "default" : "pointer",
+            opacity: locked ? 0.4 : 1,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
