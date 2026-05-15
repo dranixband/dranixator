@@ -332,45 +332,49 @@ export default function Board() {
   const lastPinchDist = useRef(0);
 
   const [paths, setPaths] = useState<PathData[]>(() => [
-    // Mock path: Song 1 → up toward Song 6 (5 nodes)
+    // Mock path: Song 1 → scattered route (6 nodes)
     {
       sourceChipId: 1,
-      color: "yellow",
+      color: "green",
       nodes: [
         { x: 0, y: -120 },
-        { x: 0, y: -160 },
+        { x: 80, y: -120 },
+        { x: 80, y: -200 },
         { x: 0, y: -200 },
-        { x: 0, y: -240 },
-        { x: 0, y: -280 },
+        { x: -80, y: -200 },
+        { x: -80, y: -280 },
       ],
       reviews: [
         {
-          type: "prompt",
-          name: "Alex",
-          prompt: "Describe this song in 3 words",
-          text: "Dark, raw, electric",
-        },
-        {
           type: "riddle",
-          name: "Maria",
+          name: "Alex",
           correct: true,
         },
         {
-          type: "prompt",
+          type: "rhythm",
+          name: "Maria",
+          taps: [0, 320, 640, 960],
+          duration: 1200,
+        },
+        {
+          type: "drawing",
           name: "DJ_K",
-          prompt: "What color is this track?",
-          text: "Deep crimson with neon green edges",
+          imageDataUrl: "",
         },
         {
-          type: "riddle",
+          type: "puzzle",
           name: "Luna",
-          correct: false,
+          moves: 14,
         },
         {
-          type: "prompt",
+          type: "memory",
           name: "Max",
-          prompt: "In what movie could this track play?",
-          text: "The Matrix, definitely the lobby scene",
+          flips: 8,
+        },
+        {
+          type: "wordScramble",
+          name: "Sasha",
+          attempts: 2,
         },
       ],
     },
@@ -1409,29 +1413,8 @@ function PathSVG({
         strokeLinecap="round"
         strokeLinejoin="round"
         filter={`url(#glow-${path.color})`}
-        opacity={0.9}
+        opacity={0.35}
       />
-
-      {/* Energy flow on completed paths */}
-      {isComplete && (
-        <polyline
-          points={pointsStr}
-          fill="none"
-          stroke={color}
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeDasharray="4 12"
-          opacity={0.6}
-        >
-          <animate
-            attributeName="stroke-dashoffset"
-            from="0"
-            to="-16"
-            dur="0.8s"
-            repeatCount="indefinite"
-          />
-        </polyline>
-      )}
 
       {/* Placed node circles */}
       {nodes.map((n, i) => {
@@ -1578,6 +1561,25 @@ function PathSVG({
           </g>
         );
       })}
+
+      {/* Energy flow animation — rendered last so it's on top */}
+      <polyline
+        points={pointsStr}
+        fill="none"
+        stroke={color}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeDasharray="4 12"
+        opacity={0.9}
+      >
+        <animate
+          attributeName="stroke-dashoffset"
+          from="0"
+          to="-16"
+          dur="0.8s"
+          repeatCount="indefinite"
+        />
+      </polyline>
     </g>
   );
 }
