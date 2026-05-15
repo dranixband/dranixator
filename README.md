@@ -14,17 +14,23 @@ Interactive PCB-style board for **DRANIX** — a band that fuses music with IT/A
 
 ## Node types (mini-games)
 
-Each node on a path requires completing one of 7 randomly assigned challenges:
+Each node on a path requires completing one of 4 randomly assigned challenges:
 
 | Type | Challenge | Result |
 |------|-----------|--------|
-| **Prompt** | Answer a random question about the song | Question + answer displayed |
-| **Rhythm Tap** | Tap in rhythm to a 10-sec song fragment | Tap pattern visualized |
-| **Pixel Art** | Draw pixel art on a grid | Drawing displayed |
 | **Riddle** | Guess which track 3 emojis represent | Correct/wrong (must be correct to place) |
 | **Puzzle** | Solve a sliding puzzle with the song's cover art | Move count |
-| **Memory** | Find matching pairs of album covers | Flip count |
+| **Memory** | Find matching pairs of album covers | Flip count (with flip limit) |
 | **Wire Trace** | Connect numbered dots by drawing lines without crossing | Line count |
+
+## Difficulty progression
+
+Challenges get harder the further a node is from its parent chip:
+
+- **7 levels**: Easy → Easy+ → Medium → Medium+ → Hard → Hard+ → Expert
+- Wire Trace scales from 4 to 10 dots
+- Memory scales from 22 to 10 max flips
+- Difficulty level displayed with color indicator (green → yellow → red)
 
 ## Tech stack
 
@@ -80,11 +86,11 @@ public/
 - Pan & zoom (mouse drag + scroll wheel)
 - Touch support (single-finger pan, pinch-to-zoom)
 - SVG wire rendering with glow effects and energy flow animations
-- 7 mini-game node types for interactive engagement
+- 4 active mini-game node types with difficulty progression
 - Chip unlock animations
 - Audio player with play/pause on chips
 - Reaction system (Lottie animations) per chip
-- U-shaped SVG socket connectors on chip anchor points
+- Close button on challenge popups
 - Custom PCB chip artwork with DRANIX branding
 - Song-specific puzzle images (album covers)
 - Typed song labels — single source of truth with TypeScript enforcement

@@ -42,7 +42,7 @@ interface MemoryGameProps {
 }
 
 export default function MemoryGame({ difficulty = 0, onSolved }: MemoryGameProps) {
-  const maxFlips = 24 - Math.round(difficulty * 12);
+  const maxFlips = 22 - Math.floor(difficulty * 6) * 2;
   const [cards, setCards] = useState<Card[]>(() => buildDeck());
   const [flipped, setFlipped] = useState<Set<number>>(new Set());
   const [matched, setMatched] = useState<Set<number>>(new Set());

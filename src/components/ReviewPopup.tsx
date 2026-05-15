@@ -216,6 +216,8 @@ export default function ReviewPopup({
       style={{ zIndex: 1000, pointerEvents: "all" }}
       onMouseDown={handleBackdropClick}
       onClick={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
     >
       <div
         ref={cardRef}
@@ -291,6 +293,29 @@ export default function ReviewPopup({
           >
             {NODE_TYPE_LABELS[nodeType]}
           </div>
+          {(() => {
+            const level = Math.round(difficulty * 6);
+            const label = ["Easy", "Easy+", "Medium", "Medium+", "Hard", "Hard+", "Expert"][level];
+            // green(0) → yellow(0.5) → red(1)
+            const r = Math.round(difficulty <= 0.5 ? difficulty * 2 * 255 : 255);
+            const g = Math.round(difficulty <= 0.5 ? 255 : (1 - (difficulty - 0.5) * 2) * 255);
+            const color = `rgb(${r},${g},50)`;
+            return (
+              <div
+                style={{
+                  fontSize: 10,
+                  fontFamily: "monospace",
+                  color,
+                  textTransform: "uppercase",
+                  letterSpacing: 1,
+                  marginBottom: 6,
+                  opacity: 0.8,
+                }}
+              >
+                Lv.{level + 1} — {label}
+              </div>
+            );
+          })()}
           <div
             style={{
               fontSize: 18,

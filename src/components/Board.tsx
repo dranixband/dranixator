@@ -379,6 +379,7 @@ export default function Board() {
   const [viewingReview, setViewingReview] = useState<{
     songName: string;
     review: Review;
+    difficulty: number;
   } | null>(null);
   const [playingChip, setPlayingChip] = useState<SongChip | null>(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
@@ -852,7 +853,13 @@ export default function Board() {
           nodeType: getNodeTypeForPosition(gx, gy),
           audioSrc: chip?.audioSrc,
           puzzleImage: chip?.puzzleImage,
-          difficulty: Math.min(1, Math.hypot(gx, gy) / 700),
+          difficulty: (() => {
+            const cx = chip?.x ?? 0;
+            const cy = chip?.y ?? 0;
+            const cells = Math.max(0, Math.max(Math.abs(gx - cx), Math.abs(gy - cy)) / GRID - CHIP_SIZE / 2 / GRID);
+            const level = cells <= 1 ? 0 : cells <= 2 ? 1 : cells <= 3 ? 2 : cells <= 4 ? 3 : cells <= 6 ? 4 : cells <= 8 ? 5 : 6;
+            return level / 6;
+          })(),
         });
       }
     },
@@ -932,9 +939,14 @@ export default function Board() {
       if (dragMoved.current) return;
       const path = paths[pathIdx];
       if (!path || !path.reviews[nodeIdx]) return;
-      const songName =
-        SONGS.find((s) => s.id === path.sourceChipId)?.label ?? "Song";
-      setViewingReview({ songName, review: path.reviews[nodeIdx] });
+      const chip = SONGS.find((s) => s.id === path.sourceChipId);
+      const songName = chip?.label ?? "Song";
+      const node = path.nodes[nodeIdx];
+      const cx = chip?.x ?? 0;
+      const cy = chip?.y ?? 0;
+      const cells = Math.max(0, Math.max(Math.abs(node.x - cx), Math.abs(node.y - cy)) / GRID - CHIP_SIZE / 2 / GRID);
+      const level = cells <= 1 ? 0 : cells <= 2 ? 1 : cells <= 3 ? 2 : cells <= 4 ? 3 : cells <= 6 ? 4 : cells <= 8 ? 5 : 6;
+      setViewingReview({ songName, review: path.reviews[nodeIdx], difficulty: level / 6 });
     },
     [paths],
   );
@@ -1206,6 +1218,7 @@ export default function Board() {
         <ReviewViewer
           songName={viewingReview.songName}
           review={viewingReview.review}
+          difficulty={viewingReview.difficulty}
           onClose={() => setViewingReview(null)}
         />
       )}
@@ -1943,10 +1956,12 @@ function getChipEdgePoint(
 function ReviewViewer({
   songName,
   review,
+  difficulty = 0,
   onClose,
 }: {
   songName: string;
   review: Review;
+  difficulty?: number;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -2014,6 +2029,28 @@ function ReviewViewer({
           >
             {typeLabel}
           </div>
+          {(() => {
+            const level = Math.round(difficulty * 6);
+            const label = ["Easy", "Easy+", "Medium", "Medium+", "Hard", "Hard+", "Expert"][level];
+            const r = Math.round(difficulty <= 0.5 ? difficulty * 2 * 255 : 255);
+            const g = Math.round(difficulty <= 0.5 ? 255 : (1 - (difficulty - 0.5) * 2) * 255);
+            const color = `rgb(${r},${g},50)`;
+            return (
+              <div
+                style={{
+                  fontSize: 10,
+                  fontFamily: "monospace",
+                  color,
+                  textTransform: "uppercase",
+                  letterSpacing: 1,
+                  marginBottom: 6,
+                  opacity: 0.8,
+                }}
+              >
+                Lv.{level + 1} — {label}
+              </div>
+            );
+          })()}
           <div
             style={{
               fontSize: 18,
