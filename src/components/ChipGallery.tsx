@@ -74,11 +74,21 @@ export default function ChipGallery({ songLabel, onClose }: Props) {
             <div className="flex items-center gap-2 min-w-0">
               <div
                 className="flex-1 min-w-0"
-                style={{ fontFamily: "monospace", fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: 12,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
               >
                 <span style={{ color: "rgba(249,206,15,0.3)" }}>&gt;&gt; </span>
-                <span style={{ color: "rgba(249,206,15,0.45)" }}>CHIP_DATA /</span>
-                <span style={{ color: "#f9ce0f", marginLeft: 6 }}>{songLabel}</span>
+                <span style={{ color: "rgba(249,206,15,0.45)" }}>
+                  CHIP_DATA /
+                </span>
+                <span style={{ color: "#f9ce0f", marginLeft: 6 }}>
+                  {songLabel}
+                </span>
               </div>
               <button className="gallery-btn-close shrink-0" onClick={onClose}>
                 × DISC
@@ -121,14 +131,9 @@ export default function ChipGallery({ songLabel, onClose }: Props) {
 
           {/* Content */}
           <div className="gallery-content relative flex-1 overflow-y-auto p-6">
-            {tab === "AUDIO" && (
-              <AudioTab gallery={gallery} />
-            )}
+            {tab === "AUDIO" && <AudioTab gallery={gallery} />}
             {tab === "PHOTO_LOG" && (
-              <PhotoTab
-                gallery={gallery}
-                onLightbox={setLightboxPhoto}
-              />
+              <PhotoTab gallery={gallery} onLightbox={setLightboxPhoto} />
             )}
             {tab === "VIDEO_FEED" && <VideoTab gallery={gallery} />}
           </div>
@@ -181,7 +186,9 @@ function AudioTab({ gallery }: { gallery: SongGallery }) {
   const [volume, setVolume] = useState(0.7);
 
   useEffect(() => {
-    return () => { audioRef.current?.pause(); };
+    return () => {
+      audioRef.current?.pause();
+    };
   }, []);
 
   useEffect(() => {
@@ -191,8 +198,13 @@ function AudioTab({ gallery }: { gallery: SongGallery }) {
   function togglePlay() {
     const a = audioRef.current;
     if (!a) return;
-    if (isPlaying) { a.pause(); setIsPlaying(false); }
-    else { a.play(); setIsPlaying(true); }
+    if (isPlaying) {
+      a.pause();
+      setIsPlaying(false);
+    } else {
+      a.play();
+      setIsPlaying(true);
+    }
   }
 
   function handleSeek(e: React.MouseEvent<HTMLDivElement>) {
@@ -250,7 +262,14 @@ function AudioTab({ gallery }: { gallery: SongGallery }) {
         }}
       >
         {/* Label above progress bar */}
-        <span style={{ fontFamily: "monospace", fontSize: 10, color: "rgba(249,206,15,0.35)", letterSpacing: 2 }}>
+        <span
+          style={{
+            fontFamily: "monospace",
+            fontSize: 10,
+            color: "rgba(249,206,15,0.35)",
+            letterSpacing: 2,
+          }}
+        >
           DEMO_RECORDING
         </span>
 
@@ -311,7 +330,13 @@ function AudioTab({ gallery }: { gallery: SongGallery }) {
                 <rect x="6" y="1" width="3" height="10" rx="0.5" />
               </svg>
             ) : (
-              <svg width="10" height="12" viewBox="0 0 10 12" fill="#f9ce0f" style={{ marginLeft: 1 }}>
+              <svg
+                width="10"
+                height="12"
+                viewBox="0 0 10 12"
+                fill="#f9ce0f"
+                style={{ marginLeft: 1 }}
+              >
                 <path d="M1 1L9 6L1 11V1Z" />
               </svg>
             )}
@@ -321,27 +346,70 @@ function AudioTab({ gallery }: { gallery: SongGallery }) {
           <div style={{ flex: 1 }} />
 
           {/* Time */}
-          <span style={{ fontFamily: "monospace", fontSize: 11, color: "rgba(249,206,15,0.45)", flexShrink: 0 }}>
+          <span
+            style={{
+              fontFamily: "monospace",
+              fontSize: 11,
+              color: "rgba(249,206,15,0.45)",
+              flexShrink: 0,
+            }}
+          >
             {fmt(currentTime)} / {duration > 0 ? fmt(duration) : "--:--"}
           </span>
 
           {/* Volume */}
-          <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="rgba(249,206,15,0.35)">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              flexShrink: 0,
+            }}
+          >
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 16 16"
+              fill="rgba(249,206,15,0.35)"
+            >
               <path d="M2 5.5h2.5L8 2v12L4.5 10.5H2a1 1 0 01-1-1v-3a1 1 0 011-1z" />
               {volume > 0.01 && (
-                <path d="M10 5.5a3.5 3.5 0 010 5" fill="none" stroke="rgba(249,206,15,0.35)" strokeWidth="1.3" />
+                <path
+                  d="M10 5.5a3.5 3.5 0 010 5"
+                  fill="none"
+                  stroke="rgba(249,206,15,0.35)"
+                  strokeWidth="1.3"
+                />
               )}
               {volume > 0.5 && (
-                <path d="M11.5 3.5a6 6 0 010 9" fill="none" stroke="rgba(249,206,15,0.2)" strokeWidth="1.3" />
+                <path
+                  d="M11.5 3.5a6 6 0 010 9"
+                  fill="none"
+                  stroke="rgba(249,206,15,0.2)"
+                  strokeWidth="1.3"
+                />
               )}
             </svg>
             <div
               ref={volBarRef}
               onMouseDown={handleVolMouseDown}
-              style={{ width: 50, height: 3, background: "rgba(249,206,15,0.1)", borderRadius: 2, cursor: "pointer", position: "relative" }}
+              style={{
+                width: 50,
+                height: 3,
+                background: "rgba(249,206,15,0.1)",
+                borderRadius: 2,
+                cursor: "pointer",
+                position: "relative",
+              }}
             >
-              <div style={{ width: `${volume * 100}%`, height: "100%", background: "rgba(249,206,15,0.5)", borderRadius: 2 }} />
+              <div
+                style={{
+                  width: `${volume * 100}%`,
+                  height: "100%",
+                  background: "rgba(249,206,15,0.5)",
+                  borderRadius: 2,
+                }}
+              />
               <div
                 style={{
                   position: "absolute",
@@ -371,7 +439,11 @@ function AudioTab({ gallery }: { gallery: SongGallery }) {
           onLoadedMetadata={() => {
             if (audioRef.current) setDuration(audioRef.current.duration);
           }}
-          onEnded={() => { setIsPlaying(false); setProgress(0); setCurrentTime(0); }}
+          onEnded={() => {
+            setIsPlaying(false);
+            setProgress(0);
+            setCurrentTime(0);
+          }}
         />
       </div>
 
@@ -402,7 +474,9 @@ function AudioTab({ gallery }: { gallery: SongGallery }) {
             style={{
               fontFamily: "monospace",
               fontSize: 12,
-              color: gallery.instrumental ? "rgba(249,206,15,0.7)" : "rgba(249,206,15,0.2)",
+              color: gallery.instrumental
+                ? "rgba(249,206,15,0.7)"
+                : "rgba(249,206,15,0.2)",
             }}
           >
             {gallery.instrumental ? "instrumental.wav" : "// not_available_yet"}
@@ -422,10 +496,12 @@ function AudioTab({ gallery }: { gallery: SongGallery }) {
               transition: "all 0.15s",
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.background = "rgba(249,206,15,0.08)";
+              (e.currentTarget as HTMLAnchorElement).style.background =
+                "rgba(249,206,15,0.08)";
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
+              (e.currentTarget as HTMLAnchorElement).style.background =
+                "transparent";
             }}
           >
             ⬇ DOWNLOAD
@@ -463,7 +539,8 @@ function AudioTab({ gallery }: { gallery: SongGallery }) {
             fontSize: "clamp(18px, 3.5vw, 32px)",
             letterSpacing: "0.18em",
             color: "#f9ce0f",
-            textShadow: "0 0 24px rgba(249,206,15,0.5), 0 0 60px rgba(249,206,15,0.15)",
+            textShadow:
+              "0 0 24px rgba(249,206,15,0.5), 0 0 60px rgba(249,206,15,0.15)",
           }}
         >
           DRANIX
@@ -515,17 +592,37 @@ const CHIP_FRAMES: string[] = [
   " ╔══════════╗  \n╱░░░░░░░░░░╱║ \n║░◈DRANIX◈░║║ \n║░░░░░░░░░░║║ \n╚══════════╝╱ ",
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function SpinningChip() {
   const [idx, setIdx] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => setIdx((i) => (i + 1) % CHIP_FRAMES.length), 110);
+    const id = setInterval(
+      () => setIdx((i) => (i + 1) % CHIP_FRAMES.length),
+      110,
+    );
     return () => clearInterval(id);
   }, []);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, paddingTop: 16, paddingBottom: 8 }}>
-      <div style={{ fontFamily: "monospace", fontSize: 9, color: "rgba(249,206,15,0.2)", letterSpacing: 3 }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 8,
+        paddingTop: 16,
+        paddingBottom: 8,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "monospace",
+          fontSize: 9,
+          color: "rgba(249,206,15,0.2)",
+          letterSpacing: 3,
+        }}
+      >
         // chip_render.exe
       </div>
       <pre
@@ -590,7 +687,12 @@ function PhotoTab({
           <img
             src={src}
             alt=""
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+            }}
           />
         </div>
       ))}
