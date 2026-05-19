@@ -592,55 +592,55 @@ const CHIP_FRAMES: string[] = [
   " ╔══════════╗  \n╱░░░░░░░░░░╱║ \n║░◈DRANIX◈░║║ \n║░░░░░░░░░░║║ \n╚══════════╝╱ ",
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function SpinningChip() {
-  const [idx, setIdx] = useState(0);
+// TODO use in future somewhere else
+// function SpinningChip() {
+//   const [idx, setIdx] = useState(0);
 
-  useEffect(() => {
-    const id = setInterval(
-      () => setIdx((i) => (i + 1) % CHIP_FRAMES.length),
-      110,
-    );
-    return () => clearInterval(id);
-  }, []);
+//   useEffect(() => {
+//     const id = setInterval(
+//       () => setIdx((i) => (i + 1) % CHIP_FRAMES.length),
+//       110,
+//     );
+//     return () => clearInterval(id);
+//   }, []);
 
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 8,
-        paddingTop: 16,
-        paddingBottom: 8,
-      }}
-    >
-      <div
-        style={{
-          fontFamily: "monospace",
-          fontSize: 9,
-          color: "rgba(249,206,15,0.2)",
-          letterSpacing: 3,
-        }}
-      >
-        // chip_render.exe
-      </div>
-      <pre
-        style={{
-          fontFamily: "monospace",
-          fontSize: "clamp(10px, 2.2vw, 13px)",
-          color: "#f9ce0f",
-          lineHeight: 1.5,
-          margin: 0,
-          textShadow: "0 0 10px rgba(249,206,15,0.35)",
-          letterSpacing: "0.02em",
-        }}
-      >
-        {CHIP_FRAMES[idx]}
-      </pre>
-    </div>
-  );
-}
+//   return (
+//     <div
+//       style={{
+//         display: "flex",
+//         flexDirection: "column",
+//         alignItems: "center",
+//         gap: 8,
+//         paddingTop: 16,
+//         paddingBottom: 8,
+//       }}
+//     >
+//       <div
+//         style={{
+//           fontFamily: "monospace",
+//           fontSize: 9,
+//           color: "rgba(249,206,15,0.2)",
+//           letterSpacing: 3,
+//         }}
+//       >
+//         // chip_render.exe
+//       </div>
+//       <pre
+//         style={{
+//           fontFamily: "monospace",
+//           fontSize: "clamp(10px, 2.2vw, 13px)",
+//           color: "#f9ce0f",
+//           lineHeight: 1.5,
+//           margin: 0,
+//           textShadow: "0 0 10px rgba(249,206,15,0.35)",
+//           letterSpacing: "0.02em",
+//         }}
+//       >
+//         {CHIP_FRAMES[idx]}
+//       </pre>
+//     </div>
+//   );
+// }
 
 /* ───── Photo Tab ───── */
 
