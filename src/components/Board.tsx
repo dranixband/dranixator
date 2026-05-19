@@ -1,6 +1,8 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import lottie from "lottie-web";
 import ReviewPopup from "./ReviewPopup";
+import ChipGallery from "./ChipGallery";
+import { useAudioPlayer } from "../hooks/useAudioPlayer";
 import chipImg from "../assets/Chip.jpg";
 import dranixLogo from "../assets/Dranix logo.svg";
 import doorLeft from "../assets/door-left.svg";
@@ -391,15 +393,25 @@ export default function Board() {
     review: Review;
     difficulty: number;
   } | null>(null);
-  const [playingChip, setPlayingChip] = useState<SongChip | null>(null);
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const [audioProgress, setAudioProgress] = useState(0);
-  const [audioDuration, setAudioDuration] = useState(0);
-  const [audioVolume, setAudioVolume] = useState(0.7);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const progressIntervalRef = useRef<number>(0);
+  const {
+    playingChip,
+    isAudioPlaying,
+    audioProgress,
+    audioDuration,
+    audioVolume,
+    isFragmentLocked,
+    playAudio,
+    toggleAudioPlayback,
+    seekAudio,
+    changeVolume,
+    playFragment,
+    closeAudio,
+  } = useAudioPlayer<SongChip>();
   const [skipReview, setSkipReview] = useState(false);
   const [introOpen, setIntroOpen] = useState(true);
+  const [galleryChip, setGalleryChip] = useState<SongChip | null>(null);
+  const galleryOpenRef = useRef(false);
+  useEffect(() => { galleryOpenRef.current = galleryChip !== null; }, [galleryChip]);
 
   // Reactions: per-chip selected reaction for current user + total counts
   const [chipReactions, setChipReactions] = useState<
@@ -486,192 +498,6 @@ export default function Board() {
     }
     return WIRE_COLORS.yellow;
   }, [activePathIdx, buildingFromChip, paths]);
-
-  /* ── Audio Player ── */
-
-  const playAudio = useCallback(
-    (chip: SongChip) => {
-      if (!chip.audioSrc) return;
-
-      // If clicking the same chip that's already playing, toggle play/pause
-      if (playingChip?.id === chip.id && audioRef.current) {
-        if (isAudioPlaying) {
-          audioRef.current.pause();
-          setIsAudioPlaying(false);
-        } else {
-          audioRef.current.play();
-          setIsAudioPlaying(true);
-        }
-        return;
-      }
-
-      // Stop previous
-      if (audioRef.current) {
-        audioRef.current.pause();
-        clearInterval(progressIntervalRef.current);
-      }
-
-      const base = import.meta.env.BASE_URL;
-      const audio = new Audio(`${base}${chip.audioSrc}`);
-      audioRef.current = audio;
-      setPlayingChip(chip);
-      setAudioProgress(0);
-      setAudioDuration(0);
-
-      audio.onloadedmetadata = () => setAudioDuration(audio.duration);
-      audio.onended = () => {
-        setIsAudioPlaying(false);
-        setAudioProgress(audio.duration);
-        clearInterval(progressIntervalRef.current);
-      };
-
-      audio.volume = audioVolume;
-      audio.play();
-      setIsAudioPlaying(true);
-
-      progressIntervalRef.current = window.setInterval(() => {
-        if (audio) setAudioProgress(audio.currentTime);
-      }, 250);
-    },
-    [playingChip, isAudioPlaying, audioVolume],
-  );
-
-  const toggleAudioPlayback = useCallback(() => {
-    if (!audioRef.current) return;
-    if (isAudioPlaying) {
-      audioRef.current.pause();
-      setIsAudioPlaying(false);
-    } else {
-      audioRef.current.play();
-      setIsAudioPlaying(true);
-    }
-  }, [isAudioPlaying]);
-
-  const seekAudio = useCallback(
-    (fraction: number) => {
-      if (!audioRef.current || !audioDuration) return;
-      audioRef.current.currentTime = fraction * audioDuration;
-      setAudioProgress(audioRef.current.currentTime);
-    },
-    [audioDuration],
-  );
-
-  const changeVolume = useCallback((vol: number) => {
-    setAudioVolume(vol);
-    if (audioRef.current) audioRef.current.volume = vol;
-  }, []);
-
-  const fragmentTimerRef = useRef<number>(0);
-  const [isFragmentLocked, setIsFragmentLocked] = useState(false);
-
-  /** Play a timed fragment via the global player with 0.5s fade-in/out */
-  const playFragment = useCallback(
-    (chip: SongChip, startTime: number, endTime: number) => {
-      if (!chip.audioSrc) return;
-
-      // Stop previous
-      if (audioRef.current) {
-        audioRef.current.pause();
-        clearInterval(progressIntervalRef.current);
-      }
-      clearInterval(fragmentTimerRef.current);
-
-      const base = import.meta.env.BASE_URL;
-      const audio = new Audio(`${base}${chip.audioSrc}`);
-      audioRef.current = audio;
-      setPlayingChip(chip);
-      setAudioProgress(0);
-      setAudioDuration(0);
-      setIsFragmentLocked(true);
-
-      const FADE = 0.5;
-      const targetVol = audioVolume;
-
-      audio.currentTime = startTime;
-      audio.volume = 0;
-
-      const unlockAndRestore = () => {
-        setIsFragmentLocked(false);
-        if (audioRef.current === audio) {
-          audio.volume = targetVol;
-        }
-      };
-
-      audio.onloadedmetadata = () => {
-        setAudioDuration(audio.duration);
-        setAudioProgress(audio.currentTime);
-      };
-      audio.onended = () => {
-        setIsAudioPlaying(false);
-        clearInterval(progressIntervalRef.current);
-        clearInterval(fragmentTimerRef.current);
-        unlockAndRestore();
-      };
-
-      audio.play().catch(() => {});
-      setIsAudioPlaying(true);
-
-      // Progress tracking (normal global player interval)
-      progressIntervalRef.current = window.setInterval(() => {
-        if (audio) setAudioProgress(audio.currentTime);
-      }, 250);
-
-      // Fade-in/out + auto-stop on a faster interval
-      fragmentTimerRef.current = window.setInterval(() => {
-        if (!audioRef.current || audioRef.current !== audio) {
-          clearInterval(fragmentTimerRef.current);
-          return;
-        }
-        const elapsed = audio.currentTime - startTime;
-        const remaining = endTime - audio.currentTime;
-
-        if (remaining <= 0) {
-          // Restore volume before pausing so next play is normal
-          audio.volume = targetVol;
-          audio.pause();
-          setIsAudioPlaying(false);
-          clearInterval(progressIntervalRef.current);
-          clearInterval(fragmentTimerRef.current);
-          unlockAndRestore();
-          return;
-        }
-
-        // Fade in
-        if (elapsed < FADE) {
-          audio.volume = Math.min(targetVol, (elapsed / FADE) * targetVol);
-        }
-        // Fade out
-        else if (remaining < FADE) {
-          audio.volume = Math.max(0, (remaining / FADE) * targetVol);
-        }
-        // Normal
-        else if (audio.volume !== targetVol) {
-          audio.volume = targetVol;
-        }
-      }, 50);
-    },
-    [audioVolume],
-  );
-
-  const closeAudio = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    clearInterval(progressIntervalRef.current);
-    setPlayingChip(null);
-    setIsAudioPlaying(false);
-    setAudioProgress(0);
-    setAudioDuration(0);
-  }, []);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      audioRef.current?.pause();
-      clearInterval(progressIntervalRef.current);
-    };
-  }, []);
 
   /* ── Pan / Zoom ── */
 
@@ -804,6 +630,7 @@ export default function Board() {
 
   const handleWheel = useCallback(
     (e: WheelEvent) => {
+      if (galleryOpenRef.current) return;
       e.preventDefault();
       const container = containerRef.current;
       if (!container) return;
@@ -1070,14 +897,14 @@ export default function Board() {
       ref={containerRef}
       className="w-screen h-screen overflow-hidden select-none"
       id="pcb-board"
-      style={{ cursor: panning ? "grabbing" : "grab", touchAction: "none" }}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onClick={handleBoardClick}
+      style={{ cursor: galleryChip ? "default" : panning ? "grabbing" : "grab", touchAction: "none" }}
+      onMouseDown={galleryChip ? undefined : handleMouseDown}
+      onMouseMove={galleryChip ? undefined : handleMouseMove}
+      onMouseUp={galleryChip ? undefined : handleMouseUp}
+      onTouchStart={galleryChip ? undefined : handleTouchStart}
+      onTouchMove={galleryChip ? undefined : handleTouchMove}
+      onTouchEnd={galleryChip ? undefined : handleTouchEnd}
+      onClick={galleryChip ? undefined : handleBoardClick}
     >
       <div
         style={{
@@ -1184,12 +1011,24 @@ export default function Board() {
             isPlaying={playingChip?.id === song.id && isAudioPlaying}
             onClick={() => handleChipClick(song.id)}
             onPlay={() => playAudio(song)}
+            onGalleryOpen={() => {
+                if (isAudioPlaying) toggleAudioPlayback();
+                setGalleryChip(song);
+              }}
             selectedReaction={chipReactions[song.id]?.selected ?? null}
             reactionCounts={chipReactions[song.id]?.counts ?? {}}
             onReaction={(reactionId) => handleReaction(song.id, reactionId)}
           />
         ))}
       </div>
+
+      {/* Chip Gallery overlay */}
+      {galleryChip && (
+        <ChipGallery
+          songLabel={galleryChip.label}
+          onClose={() => setGalleryChip(null)}
+        />
+      )}
 
       {/* Review write popup */}
       {pendingGhost && (
@@ -1330,9 +1169,10 @@ export default function Board() {
         />
       )}
 
-      {/* Bottom audio player bar */}
+      {/* Bottom audio player bar — hidden while gallery is open, state preserved */}
       {playingChip && (
         <AudioPlayerBar
+          style={{ visibility: galleryChip ? "hidden" : "visible" }}
           song={playingChip}
           isPlaying={isAudioPlaying}
           progress={audioProgress}
@@ -1865,6 +1705,7 @@ function Chip({
   isPlaying,
   onClick,
   onPlay,
+  onGalleryOpen,
   selectedReaction,
   reactionCounts,
   onReaction,
@@ -1876,6 +1717,7 @@ function Chip({
   isPlaying: boolean;
   onClick: () => void;
   onPlay: () => void;
+  onGalleryOpen: () => void;
   selectedReaction: string | null;
   reactionCounts: Record<string, number>;
   onReaction: (reactionId: string) => void;
@@ -1884,7 +1726,7 @@ function Chip({
 
   return (
     <div
-      className={`absolute flex items-center justify-center rounded-lg transition-all duration-500
+      className={`chip-root absolute flex items-center justify-center rounded-lg transition-all duration-500
         ${unlocked ? "text-black" : "text-black/50"}
         ${recentlyUnlocked ? "animate-chip-unlock" : ""}
       `}
@@ -1937,44 +1779,62 @@ function Chip({
         {song.label}
       </span>
 
-      {/* Play button — center of chip */}
-      {unlocked && song.audioSrc && (
+      {/* Play + Gallery buttons — centered row */}
+      {unlocked && (
         <div
-          className="absolute flex items-center justify-center play-btn"
-          style={{
-            width: 24,
-            height: 24,
-            background: "#000000",
-            borderRadius: 5,
-            cursor: "pointer",
-            zIndex: 11,
-            border: "1px solid rgba(249,206,15,0.3)",
-          }}
+          className="absolute"
+          style={{ display: "flex", alignItems: "center", gap: 8, zIndex: 11 }}
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            onPlay();
-          }}
         >
-          {isPlaying ? (
-            <svg width="10" height="12" viewBox="0 0 10 12" fill="#f9ce0f">
-              <rect x="1" y="1" width="3" height="10" rx="0.5" />
-              <rect x="6" y="1" width="3" height="10" rx="0.5" />
-            </svg>
-          ) : (
-            <svg
-              width="10"
-              height="12"
-              viewBox="0 0 10 12"
-              fill="none"
-              style={{ marginLeft: 1 }}
+          {/* Play button */}
+          {song.audioSrc && (
+            <div
+              className="flex items-center justify-center play-btn"
+              style={{
+                width: 24,
+                height: 24,
+                background: "#000000",
+                borderRadius: 5,
+                cursor: "pointer",
+                border: "1px solid rgba(249,206,15,0.3)",
+              }}
+              onClick={(e) => { e.stopPropagation(); onPlay(); }}
             >
-              <path d="M1 1L9 6L1 11V1Z" fill="#f9ce0f" />
-            </svg>
+              {isPlaying ? (
+                <svg width="10" height="12" viewBox="0 0 10 12" fill="#f9ce0f">
+                  <rect x="1" y="1" width="3" height="10" rx="0.5" />
+                  <rect x="6" y="1" width="3" height="10" rx="0.5" />
+                </svg>
+              ) : (
+                <svg width="10" height="12" viewBox="0 0 10 12" fill="none" style={{ marginLeft: 1 }}>
+                  <path d="M1 1L9 6L1 11V1Z" fill="#f9ce0f" />
+                </svg>
+              )}
+            </div>
           )}
+
+          {/* Gallery button */}
+          <div
+            className="flex items-center justify-center play-btn"
+            style={{
+              width: 24,
+              height: 24,
+              background: "#000000",
+              borderRadius: 5,
+              cursor: "pointer",
+              border: "1px solid rgba(249,206,15,0.3)",
+              fontSize: 9,
+              color: "#f9ce0f",
+              userSelect: "none",
+            }}
+            onClick={(e) => { e.stopPropagation(); onGalleryOpen(); }}
+          >
+            ◈
+          </div>
         </div>
       )}
+
 
       {/* Status label — bottom */}
       {!unlocked && (
@@ -2399,6 +2259,7 @@ function AudioPlayerBar({
   duration,
   volume,
   locked = false,
+  style,
   onToggle,
   onSeek,
   onVolumeChange,
@@ -2410,6 +2271,7 @@ function AudioPlayerBar({
   duration: number;
   volume: number;
   locked?: boolean;
+  style?: React.CSSProperties;
   onToggle: () => void;
   onSeek: (fraction: number) => void;
   onVolumeChange: (vol: number) => void;
@@ -2477,6 +2339,7 @@ function AudioPlayerBar({
         borderRadius: 12,
         padding: "10px 14px",
         backdropFilter: "blur(16px)",
+        ...style,
       }}
       onMouseDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
@@ -2488,7 +2351,7 @@ function AudioPlayerBar({
         onClick={handleSeek}
         style={{
           width: "100%",
-          height: 3,
+          height: 8,
           background: "rgba(255,255,255,0.1)",
           cursor: locked ? "default" : "pointer",
           marginBottom: 10,
@@ -2502,20 +2365,6 @@ function AudioPlayerBar({
             background: "#f9ce0f",
             borderRadius: 1,
             transition: "width 0.15s linear",
-          }}
-        />
-        {/* Seek dot */}
-        <div
-          style={{
-            position: "absolute",
-            left: `${pct}%`,
-            top: "50%",
-            transform: "translate(-50%, -50%)",
-            width: 10,
-            height: 10,
-            borderRadius: "50%",
-            background: "#f9ce0f",
-            boxShadow: "0 0 6px rgba(249,206,15,0.5)",
           }}
         />
       </div>

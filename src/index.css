@@ -73,6 +73,139 @@ html, body, #root {
   animation: ctb-pulse 1.5s ease-in-out infinite;
 }
 
+/* ── Gallery ── */
+
+@keyframes gallery-enter {
+  0% { opacity: 0; transform: scale(0.96) translateY(8px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.gallery-enter {
+  animation: gallery-enter 0.22s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+@keyframes gallery-scanline {
+  0% { top: -4px; opacity: 0.6; }
+  100% { top: 100%; opacity: 0; }
+}
+
+.gallery-scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(to bottom, rgba(249,206,15,0.18), transparent);
+  animation: gallery-scanline 0.55s linear forwards;
+  pointer-events: none;
+}
+
+.gallery-tab {
+  font-family: monospace;
+  font-size: 11px;
+  padding: 10px 24px;
+  background: transparent;
+  cursor: pointer;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  color: rgba(249,206,15,0.3);
+}
+
+.gallery-tab[data-active="true"] {
+  color: #f9ce0f;
+  border-bottom-color: #f9ce0f;
+  background: rgba(249,206,15,0.03);
+}
+
+.gallery-tab:hover:not([data-active="true"]) {
+  color: rgba(249,206,15,0.6);
+}
+
+.gallery-btn-close {
+  font-family: monospace;
+  font-size: 11px;
+  color: rgba(249,206,15,0.35);
+  border: 1px solid rgba(249,206,15,0.16);
+  padding: 5px 12px;
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.gallery-btn-close:hover {
+  color: #f9ce0f;
+  border-color: rgba(249,206,15,0.5);
+  background: rgba(249,206,15,0.04);
+}
+
+/* 3D spinning DRANIX text */
+@keyframes dranix-spin {
+  0%   { transform: rotateY(0deg); }
+  100% { transform: rotateY(-360deg); }
+}
+
+.dranix-spin {
+  display: inline-block;
+  animation: dranix-spin 5s linear infinite;
+}
+
+/* Tabs row — scrollable but no visible scrollbar */
+.gallery-tabs-row {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.gallery-tabs-row::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile adjustments */
+@media (max-width: 600px) {
+  .gallery-tab {
+    padding: 10px 14px;
+  }
+
+  .gallery-content {
+    padding: 16px;
+  }
+
+  .gallery-player-label {
+    display: none;
+  }
+}
+
+/* DATA button on chip */
+.chip-data-btn {
+  position: absolute;
+  top: 14%;
+  right: 14%;
+  width: 18px;
+  height: 18px;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid rgba(249,206,15,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s, border-color 0.15s, box-shadow 0.15s;
+  z-index: 12;
+  font-family: monospace;
+  font-size: 9px;
+  color: rgba(249,206,15,0.8);
+  line-height: 1;
+}
+
+.chip-root:hover .chip-data-btn {
+  opacity: 1;
+}
+
+.chip-data-btn:hover {
+  border-color: rgba(249,206,15,0.8) !important;
+  box-shadow: 0 0 8px rgba(249,206,15,0.3);
+  color: #f9ce0f;
+}
+
 /* Play button hover */
 .play-btn {
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
