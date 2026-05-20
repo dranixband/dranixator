@@ -4,12 +4,15 @@ const PAIR_COUNT = 4;
 const TOTAL = PAIR_COUNT * 2;
 const FLIP_DELAY = 800;
 
+const PUZZLES_BASE =
+  "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles";
+
 const ALL_IMAGES = [
-  "puzzleImages/dead.jpg",
-  "puzzleImages/sinner.jpg",
-  "puzzleImages/ritual.jpg",
-  "puzzleImages/adam.jpg",
-  "puzzleImages/samurai.jpg",
+  `${PUZZLES_BASE}/dead.jpg`,
+  `${PUZZLES_BASE}/sinner.jpg`,
+  `${PUZZLES_BASE}/ritual.jpg`,
+  `${PUZZLES_BASE}/adam.jpg`,
+  `${PUZZLES_BASE}/samurai.jpg`,
 ];
 
 interface Card {
@@ -41,7 +44,10 @@ interface MemoryGameProps {
   onSolved: (flips: number) => void;
 }
 
-export default function MemoryGame({ difficulty = 0, onSolved }: MemoryGameProps) {
+export default function MemoryGame({
+  difficulty = 0,
+  onSolved,
+}: MemoryGameProps) {
   const maxFlips = 22 - Math.floor(difficulty * 6) * 2;
   const [cards, setCards] = useState<Card[]>(() => buildDeck());
   const [flipped, setFlipped] = useState<Set<number>>(new Set());
@@ -52,8 +58,11 @@ export default function MemoryGame({ difficulty = 0, onSolved }: MemoryGameProps
   const lockRef = useRef(false);
 
   // Pick 4 images for this game session
-  const [images, setImages] = useState(() => shuffle(ALL_IMAGES).slice(0, PAIR_COUNT));
-  const base = import.meta.env.BASE_URL;
+  const [images, setImages] = useState(() =>
+    shuffle(ALL_IMAGES).slice(0, PAIR_COUNT),
+  );
+  const base = (src: string) =>
+    src.startsWith("http") ? src : `${import.meta.env.BASE_URL}${src}`;
 
   const resetGame = useCallback(() => {
     setCards(buildDeck());
@@ -125,7 +134,7 @@ export default function MemoryGame({ difficulty = 0, onSolved }: MemoryGameProps
   useEffect(() => {
     images.forEach((src) => {
       const img = new Image();
-      img.src = `${base}${src}`;
+      img.src = base(src);
     });
   }, [images, base]);
 
@@ -177,7 +186,8 @@ export default function MemoryGame({ difficulty = 0, onSolved }: MemoryGameProps
                     inset: 0,
                     backfaceVisibility: "hidden",
                     borderRadius: 6,
-                    background: "linear-gradient(135deg, #0d2818 0%, #0a1f14 100%)",
+                    background:
+                      "linear-gradient(135deg, #0d2818 0%, #0a1f14 100%)",
                     border: "1px solid rgba(34,197,94,0.25)",
                     display: "flex",
                     alignItems: "center",
@@ -211,7 +221,7 @@ export default function MemoryGame({ difficulty = 0, onSolved }: MemoryGameProps
                   }}
                 >
                   <img
-                    src={`${base}${images[card.imageIdx]}`}
+                    src={base(images[card.imageIdx])}
                     alt=""
                     style={{
                       width: "100%",
@@ -255,7 +265,11 @@ export default function MemoryGame({ difficulty = 0, onSolved }: MemoryGameProps
         </span>
         <span
           style={{
-            color: solved ? "rgba(34,197,94,0.7)" : failed ? "#ff3b5c" : "rgba(255,255,255,0.2)",
+            color: solved
+              ? "rgba(34,197,94,0.7)"
+              : failed
+                ? "#ff3b5c"
+                : "rgba(255,255,255,0.2)",
           }}
         >
           {solved ? "Solved!" : failed ? "Out of flips!" : "Find all pairs"}

@@ -40,8 +40,8 @@ export default function ChipGallery({ songLabel, onClose }: Props) {
         <div
           className="relative flex flex-col pointer-events-auto gallery-enter overflow-hidden"
           style={{
-            width: "min(92vw, 880px)",
-            height: "min(88vh, 660px)",
+            width: "min(96vw, 1080px)",
+            height: "min(94vh, 820px)",
             background: "#050505",
             border: "1px solid rgba(249,206,15,0.22)",
             boxShadow:
@@ -527,7 +527,7 @@ function AudioTab({ gallery }: { gallery: SongGallery }) {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          minHeight: 120,
+          minHeight: 60,
           perspective: "500px",
         }}
       >
@@ -547,8 +547,8 @@ function AudioTab({ gallery }: { gallery: SongGallery }) {
         </span>
       </div>
 
-      {/* ASCII chip spin */}
-      {/* SpinningChip available as standalone component — not shown here */}
+      {/* Sampler pads */}
+      <SamplerPads />
     </div>
   );
 }
@@ -641,6 +641,160 @@ function AudioTab({ gallery }: { gallery: SongGallery }) {
 //     </div>
 //   );
 // }
+
+/* ───── Sampler Pads ───── */
+
+const SAMPLE_PADS = [
+  { id: 1, label: "sample_01.mp3", src: "samples/sample.mp3" },
+  { id: 2, label: "sample_02.mp3", src: "samples/sample.mp3" },
+  { id: 3, label: "sample_03.mp3", src: "samples/sample.mp3" },
+  { id: 4, label: "sample_04.mp3", src: "samples/sample.mp3" },
+  { id: 5, label: "sample_05.mp3", src: "samples/sample.mp3" },
+  { id: 6, label: "sample_06.mp3", src: "samples/sample.mp3" },
+  { id: 7, label: "sample_07.mp3", src: "samples/sample.mp3" },
+  { id: 8, label: "sample_08.mp3", src: "samples/sample.mp3" },
+];
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
+
+function SamplerPads() {
+  const isMobile = useIsMobile();
+  const padSize = isMobile ? 75 : 150;
+
+  const [padProgress, setPadProgress] = useState<Map<number, number>>(
+    new Map(),
+  );
+  const intervalsRef = useRef<Map<number, ReturnType<typeof setInterval>>>(
+    new Map(),
+  );
+
+  useEffect(() => {
+    return () => intervalsRef.current.forEach(clearInterval);
+  }, []);
+
+  function triggerPad(id: number, src: string) {
+    const existing = intervalsRef.current.get(id);
+    if (existing) clearInterval(existing);
+
+    const audio = new Audio(`${import.meta.env.BASE_URL}${src}`);
+    audio.play();
+
+    setPadProgress((prev) => new Map(prev).set(id, 0));
+
+    const interval = setInterval(() => {
+      if (!audio.duration) return;
+      const progress = audio.currentTime / audio.duration;
+      setPadProgress((prev) => new Map(prev).set(id, progress));
+      if (audio.ended || progress >= 1) {
+        clearInterval(interval);
+        intervalsRef.current.delete(id);
+        setPadProgress((prev) => {
+          const next = new Map(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+    }, 30);
+
+    intervalsRef.current.set(id, interval);
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div
+        style={{
+          fontFamily: "monospace",
+          fontSize: 10,
+          color: "rgba(249,206,15,0.3)",
+          letterSpacing: 2,
+          textAlign: "center",
+        }}
+      >
+        SAMPLER_PADS
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(4, ${padSize}px)`,
+          gap: 6,
+          justifyContent: "center",
+        }}
+      >
+        {SAMPLE_PADS.map((pad) => {
+          const progress = padProgress.get(pad.id);
+          const isActive = progress !== undefined;
+          const fillPct = isActive ? `${(progress ?? 0) * 100}%` : "0%";
+          return (
+            <button
+              key={pad.id}
+              onMouseDown={() => triggerPad(pad.id, pad.src)}
+              style={{
+                width: padSize,
+                height: padSize,
+                position: "relative",
+                overflow: "hidden",
+                background: "rgba(249,206,15,0.02)",
+                border: `1px solid ${isActive ? "rgba(249,206,15,0.5)" : "rgba(249,206,15,0.14)"}`,
+                borderRadius: 6,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "flex-end",
+                justifyContent: "center",
+                padding: "0 6px 6px",
+                boxShadow: isActive
+                  ? "0 0 14px rgba(249,206,15,0.15)"
+                  : "inset 0 0 20px rgba(0,0,0,0.4)",
+                transition: "border-color 0.08s, box-shadow 0.08s",
+              }}
+            >
+              {/* Progress fill — bottom to top */}
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: fillPct,
+                  background: "rgba(249,206,15,0.13)",
+                  borderTop: isActive
+                    ? "1px solid rgba(249,206,15,0.35)"
+                    : "none",
+                  pointerEvents: "none",
+                }}
+              />
+              <span
+                style={{
+                  position: "relative",
+                  fontFamily: "monospace",
+                  fontSize: 8,
+                  color: isActive
+                    ? "rgba(249,206,15,0.7)"
+                    : "rgba(249,206,15,0.22)",
+                  letterSpacing: 1,
+                  textAlign: "center",
+                  wordBreak: "break-all",
+                  lineHeight: 1.3,
+                  transition: "color 0.08s",
+                }}
+              >
+                {pad.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 /* ───── Photo Tab ───── */
 

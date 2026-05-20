@@ -150,11 +150,11 @@ const COLOR_CYCLE: WireColor[] = [
 /* ───── Song chip positions (aligned to 40px grid) ───── */
 
 const SONGS: SongChip[] = [
-  { id: 1, label: "de(A)d ins(I)de", x: 0, y: 0, audioSrc: "songs/dead.mp3", puzzleImage: "puzzleImages/dead.jpg" },
-  { id: 2, label: "de[AR] sinner", x: -480, y: -480, audioSrc: "songs/sinner.mp3", puzzleImage: "puzzleImages/sinner.jpg" },
-  { id: 3, label: "r{IT}ual", x: 480, y: -480, audioSrc: "songs/ritual.mp3", puzzleImage: "puzzleImages/ritual.jpg" },
-  { id: 4, label: "adam & /AI/ve", x: -480, y: 480, audioSrc: "songs/adam.mp3", puzzleImage: "puzzleImages/adam.jpg" },
-  { id: 5, label: "samur<AI/> protocol", x: 480, y: 480, audioSrc: "songs/samurai.mp3", puzzleImage: "puzzleImages/samurai.jpg" },
+  { id: 1, label: "de(A)d ins(I)de", x: 0, y: 0, audioSrc: "songs/dead.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/dead.jpg" },
+  { id: 2, label: "de[AR] sinner", x: -480, y: -480, audioSrc: "songs/sinner.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/sinner.jpg" },
+  { id: 3, label: "r{IT}ual", x: 480, y: -480, audioSrc: "songs/ritual.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/ritual.jpg" },
+  { id: 4, label: "adam & /AI/ve", x: -480, y: 480, audioSrc: "songs/adam.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/adam.jpg" },
+  { id: 5, label: "samur<AI/> protocol", x: 480, y: 480, audioSrc: "songs/samurai.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/samurai.jpg" },
   { id: 6, label: "r<AI/>sing", x: 0, y: -480, audioSrc: "songs/AdultPanda.wav" },
   { id: 7, label: "effes", x: 0, y: 480, audioSrc: "songs/effes.mp3" },
   { id: 8, label: "pizda", x: -480, y: 0, audioSrc: "songs/Pizda.mp3" },

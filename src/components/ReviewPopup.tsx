@@ -572,7 +572,7 @@ export default function ReviewPopup({
                 Sliding puzzle
               </label>
               <SlidingPuzzle
-                imageSrc={`${import.meta.env.BASE_URL}${puzzleImage || "puzzleImages/misha.png"}`}
+                imageSrc={puzzleImage || "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/misha.png"}
                 onSolved={(moves) => setPuzzleMoves(moves)}
               />
             </div>
