@@ -191,6 +191,14 @@ function AudioTab({ gallery }: { gallery: SongGallery }) {
     };
   }, []);
 
+  // Preload samples when gallery opens
+  useEffect(() => {
+    gallery.samples?.forEach((s) => {
+      const a = new Audio(s.src);
+      a.preload = "auto";
+    });
+  }, [gallery.samples]);
+
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = volume;
   }, [volume]);
@@ -548,7 +556,7 @@ function AudioTab({ gallery }: { gallery: SongGallery }) {
       </div>
 
       {/* Sampler pads */}
-      <SamplerPads />
+      <SamplerPads samples={gallery.samples} />
     </div>
   );
 }
@@ -644,16 +652,11 @@ function AudioTab({ gallery }: { gallery: SongGallery }) {
 
 /* ───── Sampler Pads ───── */
 
-const SAMPLE_PADS = [
-  { id: 1, label: "sample_01.mp3", src: "samples/sample.mp3" },
-  { id: 2, label: "sample_02.mp3", src: "samples/sample.mp3" },
-  { id: 3, label: "sample_03.mp3", src: "samples/sample.mp3" },
-  { id: 4, label: "sample_04.mp3", src: "samples/sample.mp3" },
-  { id: 5, label: "sample_05.mp3", src: "samples/sample.mp3" },
-  { id: 6, label: "sample_06.mp3", src: "samples/sample.mp3" },
-  { id: 7, label: "sample_07.mp3", src: "samples/sample.mp3" },
-  { id: 8, label: "sample_08.mp3", src: "samples/sample.mp3" },
-];
+const DEFAULT_SAMPLE_PADS = Array.from({ length: 8 }, (_, i) => ({
+  id: i + 1,
+  label: `sample_0${i + 1}`,
+  src: "samples/sample.mp3",
+}));
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
@@ -666,16 +669,16 @@ function useIsMobile() {
   return isMobile;
 }
 
-function SamplerPads() {
+function SamplerPads({ samples }: { samples?: { label: string; src: string }[] }) {
   const isMobile = useIsMobile();
   const padSize = isMobile ? 75 : 150;
+  const pads = (samples ?? DEFAULT_SAMPLE_PADS).map((s, i) => ({ id: i + 1, ...s }));
 
   const [padProgress, setPadProgress] = useState<Map<number, number>>(
     new Map(),
   );
-  const intervalsRef = useRef<Map<number, ReturnType<typeof setInterval>>>(
-    new Map(),
-  );
+  const intervalsRef = useRef<Map<number, ReturnType<typeof setInterval>>>(new Map());
+  const audioInstancesRef = useRef<Map<number, HTMLAudioElement>>(new Map());
 
   useEffect(() => {
     return () => intervalsRef.current.forEach(clearInterval);
@@ -685,7 +688,15 @@ function SamplerPads() {
     const existing = intervalsRef.current.get(id);
     if (existing) clearInterval(existing);
 
-    const audio = new Audio(`${import.meta.env.BASE_URL}${src}`);
+    const existingAudio = audioInstancesRef.current.get(id);
+    let audio: HTMLAudioElement;
+    if (existingAudio) {
+      existingAudio.currentTime = 0;
+      audio = existingAudio;
+    } else {
+      audio = new Audio(src.startsWith("http") ? src : `${import.meta.env.BASE_URL}${src}`);
+      audioInstancesRef.current.set(id, audio);
+    }
     audio.play();
 
     setPadProgress((prev) => new Map(prev).set(id, 0));
@@ -729,7 +740,7 @@ function SamplerPads() {
           justifyContent: "center",
         }}
       >
-        {SAMPLE_PADS.map((pad) => {
+        {pads.map((pad) => {
           const progress = padProgress.get(pad.id);
           const isActive = progress !== undefined;
           const fillPct = isActive ? `${(progress ?? 0) * 100}%` : "0%";

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { getCachedAudio } from "../lib/audioCache";
 
 export interface AudioChip {
   id: number;
@@ -21,6 +22,8 @@ export interface UseAudioPlayerReturn<T extends AudioChip> {
 }
 
 const BASE = import.meta.env.BASE_URL as string;
+const resolveAudioSrc = (src: string) =>
+  src.startsWith("http") ? src : `${BASE}${src}`;
 
 export function useAudioPlayer<
   T extends AudioChip,
@@ -78,7 +81,7 @@ export function useAudioPlayer<
         clearInterval(progressIntervalRef.current);
       }
 
-      const audio = new Audio(`${BASE}${chip.audioSrc}`);
+      const audio = getCachedAudio(resolveAudioSrc(chip.audioSrc!));
       audioRef.current = audio;
       setPlayingChip(chip);
       setAudioProgress(0);
@@ -126,7 +129,7 @@ export function useAudioPlayer<
       }
       clearInterval(fragmentTimerRef.current);
 
-      const audio = new Audio(`${BASE}${chip.audioSrc}`);
+      const audio = getCachedAudio(resolveAudioSrc(chip.audioSrc!));
       audioRef.current = audio;
       setPlayingChip(chip);
       setAudioProgress(0);

@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
+import { preloadAudio } from "../lib/audioCache";
 import lottie from "lottie-web";
 import ReviewPopup from "./ReviewPopup";
 import ChipGallery from "./ChipGallery";
@@ -150,15 +151,15 @@ const COLOR_CYCLE: WireColor[] = [
 /* ───── Song chip positions (aligned to 40px grid) ───── */
 
 const SONGS: SongChip[] = [
-  { id: 1, label: "de(A)d ins(I)de", x: 0, y: 0, audioSrc: "songs/dead.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/dead.jpg" },
-  { id: 2, label: "de[AR] sinner", x: -480, y: -480, audioSrc: "songs/sinner.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/sinner.jpg" },
-  { id: 3, label: "r{IT}ual", x: 480, y: -480, audioSrc: "songs/ritual.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/ritual.jpg" },
-  { id: 4, label: "adam & /AI/ve", x: -480, y: 480, audioSrc: "songs/adam.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/adam.jpg" },
-  { id: 5, label: "samur<AI/> protocol", x: 480, y: 480, audioSrc: "songs/samurai.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/samurai.jpg" },
-  { id: 6, label: "r<AI/>sing", x: 0, y: -480, audioSrc: "songs/AdultPanda.wav" },
-  { id: 7, label: "effes", x: 0, y: 480, audioSrc: "songs/effes.mp3" },
-  { id: 8, label: "pizda", x: -480, y: 0, audioSrc: "songs/Pizda.mp3" },
-  { id: 9, label: "doshik", x: 480, y: 0, audioSrc: "songs/Doshik.mp3" },
+  { id: 1, label: "de(A)d ins(I)de", x: 0, y: 0, audioSrc: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/dead.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/dead.jpg" },
+  { id: 2, label: "de[AR] sinner", x: -480, y: -480, audioSrc: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/sinner.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/sinner.jpg" },
+  { id: 3, label: "r{IT}ual", x: 480, y: -480, audioSrc: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/ritual.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/ritual.jpg" },
+  { id: 4, label: "adam & /AI/ve", x: -480, y: 480, audioSrc: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/adam.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/adam.jpg" },
+  { id: 5, label: "samur<AI/> protocol", x: 480, y: 480, audioSrc: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/samurai.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/samurai.jpg" },
+  { id: 6, label: "r<AI/>sing", x: 0, y: -480, audioSrc: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/rising.mp3" },
+  { id: 7, label: "effes", x: 0, y: 480, audioSrc: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/effes.mp3" },
+  { id: 8, label: "pizda", x: -480, y: 0, audioSrc: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/Pizda.mp3" },
+  { id: 9, label: "doshik", x: 480, y: 0, audioSrc: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/Doshik.mp3" },
 ];
 
 /* ───── 8-direction offsets ───── */
@@ -324,6 +325,12 @@ function getChipExitPositions(
 /* ───── Main Board Component ───── */
 
 export default function Board() {
+  useEffect(() => {
+    SONGS.forEach((song) => {
+      if (song.audioSrc) preloadAudio(song.audioSrc);
+    });
+  }, []);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
   const [view, setView] = useState<ViewState>({ x: 0, y: 0, scale: 1 });

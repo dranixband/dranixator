@@ -29,9 +29,10 @@
 | `src/constants/lyrics.ts` | Тексты песен |
 | `src/constants/wordScrambles.ts` | Фразы для Word Scramble + таймкоды аудио |
 | `src/index.css` | PCB-стили фона, анимации (chip-unlock, popup-enter, node-hover) |
-| `public/songs/` | MP3/WAV файлы песен (9 треков) |
-| `public/puzzleImages/` | Обложки альбомов для пазлов |
+| `src/lib/audioCache.ts` | Кеш Audio объектов — preloadAudio / getCachedAudio |
+| `src/constants/gallery.ts` | Данные галереи — demo, photos, videos, samples[] |
 | `public/lottie/` | JSON-анимации для реакций |
+| `public/samples/` | Локальный заглушка sample.mp3 (fallback для пэдов) |
 
 ---
 
@@ -138,11 +139,23 @@ Ghost-ноды показывают иконку типа (?!, пазл, кар�
 
 ---
 
+## Медиа хранилище
+
+Все медиафайлы на **Supabase Storage** (free tier, без карты):
+- **Аудио (песни)**: `https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/`
+- **Аудио (семплы)**: `https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/samples/{song}/`
+- **Изображения (пазлы)**: `https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/`
+
+Локальные папки `public/songs/` и `public/puzzleImages/` удалены из репозитория.
+
+---
+
 ## Аудиоплеер
 
 - Встроенный плеер в нижней части экрана (фиксированный, 30% ширины, полупрозрачный с backdrop-blur)
 - Play/Pause, прогресс-бар с перемоткой, регулятор громкости
-- Все 9 песен подключены как локальные MP3/WAV из `public/songs/`
+- Все 9 песен подключены через Supabase CDN
+- Preload: Board.tsx загружает все треки на маунт через `preloadAudio()`, `useAudioPlayer` переиспользует кешированные Audio объекты через `getCachedAudio()` — повторных сетевых запросов нет
 - Проигрывание фрагментов при успехе в Word Scramble (fade-in/out 0.5 сек, авто-пауза)
 - Блокировка контролов плеера во время фрагмента
 
@@ -193,6 +206,36 @@ Ghost-ноды показывают иконку типа (?!, пазл, кар�
 
 ---
 
+## Галерея чипа (ChipGallery)
+
+Открывается по кнопке ◈ на чипе. Размер: `min(96vw, 1080px)` × `min(94vh, 820px)`.
+
+**Вкладки**: `// AUDIO`, `// PHOTO_LOG`, `// VIDEO_FEED`
+
+**AUDIO вкладка**:
+- Плеер: прогресс-бар + [▶ | время | громкость]
+- Блок скачивания инструментала
+- CSS 3D анимация "DRANIX" (rotateY)
+- **SAMPLER_PADS**: 8 MIDI-пэдов (120×120px desktop, 75×75px mobile)
+  - Desktop: 4 колонки × 2 ряда. Mobile: 3 колонки (3-3-2)
+  - Клик → воспроизведение семпла. Повторный клик по играющему → рестарт
+  - Визуал: вертикальная полоска прогресса (снизу вверх) пока семпл играет
+  - Одновременное воспроизведение разных пэдов поддерживается
+  - Семплы загружаются при открытии галереи
+
+**Данные семплов** — в `src/constants/gallery.ts`, поле `samples: { label, src }[]`.
+Сейчас заполнено только для `de(A)d ins(I)de` (8 семплов: okay, singalong, bleagh, chorus, guit_intro, bass_verse_2, drums, guit_solo).
+
+---
+
+## Git / Deploy
+- Remote: `git@github-personal:dranixband/dranixator.git`
+- Локальный git config репо: `user.name = dranixband`, `user.email = dranixband@gmail.com`
+- Глобальный git config (корпоративный): `michael.shiryakov@getmoss.com`
+- Деплой на GitHub Pages под аккаунтом `dranixband`
+
+---
+
 ## Что реализовано
 - [x] Pannable/zoomable доска с touch support
 - [x] 9 чипов в квадратной сетке
@@ -201,16 +244,23 @@ Ghost-ноды показывают иконку типа (?!, пазл, кар�
 - [x] 5 активных мини-игр: riddle, puzzle, memory, wire, wordScramble
 - [x] Шахматная карта типов нод по координатам (% 5)
 - [x] Word Scramble: слоты, drag-and-drop, лимит попыток, подсветка, фрагмент аудио
-- [x] Встроенный аудиоплеер (play/pause, seek, volume) для 9 песен
+- [x] Встроенный аудиоплеер (play/pause, seek, volume) — Supabase CDN
+- [x] Audio preload кеш — без повторных запросов при нажатии play
+- [x] Галерея чипа с вкладками AUDIO / PHOTO_LOG / VIDEO_FEED
+- [x] SAMPLER_PADS — 8 MIDI-пэдов с прогресс-баром и рестартом
 - [x] Проигрывание фрагментов с fade-in/out и блокировкой плеера
 - [x] Lottie-реакции на чипах (7 реакций, одна на чип)
 - [x] PCB-стилистика
 - [x] Анимации (chip unlock, popup entrance, ghost pulsing, energy flow, intro doors)
 - [x] Система сложности (7 уровней, distance-based)
+- [x] Все медиафайлы на Supabase (изображения + аудио)
 
 ## Что НЕ сделано
 - [ ] Бэкенд, БД, персистенция данных
 - [ ] User authentication
 - [ ] Совместная работа (shared state между пользователями)
 - [ ] SEO + link preview meta
+- [ ] Семплы для 8 из 9 песен (только dead заполнен)
+- [ ] Фото/видео/инструменталы в галерее (пока пусто для всех)
+- [ ] Puzzle images для 4 песен (rising, effes, pizda, doshik)
 - [ ] Ещё больше мини-игр (quiz, reaction time, Simon Says)
