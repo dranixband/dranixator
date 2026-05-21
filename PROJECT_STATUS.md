@@ -17,6 +17,7 @@
 |------|-----------|
 | `src/components/Board.tsx` | Главный компонент: сетка, чипы, SVG-провода, ноды, pan/zoom, аудиоплеер, реакции, вся логика |
 | `src/components/ReviewPopup.tsx` | Попап для создания ноды (маршрутизация к мини-играм) |
+| `src/components/ChipGallery.tsx` | Галерея чипа — вкладки AUDIO / PHOTO_LOG / VIDEO_FEED |
 | `src/components/EmojiRiddle.tsx` | Угадай трек по 3 эмодзи |
 | `src/components/SlidingPuzzle.tsx` | Слайдинг-пазл 3×3 с обложкой альбома |
 | `src/components/MemoryGame.tsx` | Найди пары карточек (4×2) |
@@ -25,12 +26,12 @@
 | `src/components/PixelCanvas.tsx` | Пиксельарт редактор 48×48 (отключён) |
 | `src/components/RhythmTap.tsx` | Ритм-тап игра (отключена) |
 | `src/constants/songs.ts` | Список песен (SongLabel type — source of truth) |
+| `src/constants/gallery.ts` | Данные галереи — demo, photos: PhotoEntry[], videos, samples[] |
 | `src/constants/riddles.ts` | Эмодзи-загадки |
 | `src/constants/lyrics.ts` | Тексты песен |
 | `src/constants/wordScrambles.ts` | Фразы для Word Scramble + таймкоды аудио |
-| `src/index.css` | PCB-стили фона, анимации (chip-unlock, popup-enter, node-hover) |
+| `src/index.css` | PCB-стили фона, анимации (chip-unlock, popup-enter, node-hover, node-destroy-*, wire-destroy-flash) |
 | `src/lib/audioCache.ts` | Кеш Audio объектов — preloadAudio / getCachedAudio |
-| `src/constants/gallery.ts` | Данные галереи — demo, photos, videos, samples[] |
 | `public/lottie/` | JSON-анимации для реакций |
 | `public/samples/` | Локальный заглушка sample.mp3 (fallback для пэдов) |
 
@@ -80,7 +81,19 @@ PathData {
   nodes: {x, y}[]
   color: WireColor        // yellow | cyan | red | magenta | green | orange
   reachedChipId?: number
-  reviews: Review[]
+  reviews: (Review | null)[]  // null = нода разрушена саботёром, можно заново заполнить
+}
+
+// Галерея
+PhotoEntry { src: string; title: string; date: string }
+
+SongGallery {
+  demo?: string
+  instrumental?: string
+  photos: PhotoEntry[]    // было string[], теперь с title и date
+  videos: string[]
+  description?: string
+  samples?: { label: string; src: string }[]
 }
 ```
 
@@ -179,10 +192,11 @@ Ghost-ноды показывают иконку типа (?!, пазл, кар�
 4. **Прохождение мини-игры** → нода создаётся, новые ghost-ноды появляются
 5. Если нода попала на **anchor заблокированного чипа** → чип разблокируется (flash-анимация)
 6. Разблокированный чип можно кликнуть и строить из него новые пути
-7. **Клик на существующую ноду** → просмотр содержимого
-8. **Hover на ноде** → появляется светящееся кольцо
-9. **Play на чипе** → аудиоплеер внизу экрана
-10. **Реакция на чипе** → Lottie-анимация, счётчик
+7. **Клик на существующую ноду** → просмотр содержимого (ReviewViewer)
+8. **Клик на разрушенную ноду** (пустая, пунктирный кружок) → открывается попап для повторного заполнения
+9. **Hover на ноде** → появляется светящееся кольцо
+10. **Play на чипе** → аудиоплеер внизу экрана
+11. **Реакция на чипе** → Lottie-анимация, счётчик
 
 ### Ограничения ghost-нод
 - Нельзя идти в обратном направлении (противоположное предыдущему шагу)
@@ -199,8 +213,9 @@ Ghost-ноды показывают иконку типа (?!, пазл, кар�
 - **Сетка**: CSS linear-gradient, линии 40×40px
 - **Чипы**: текстура микросхемы, логотип DRANIX, золотая обводка при unlock
 - **Провода**: SVG polyline + feGaussianBlur glow filter (6 цветов)
-- **Завершённые пути**: анимация energy flow (animated stroke-dashoffset)
-- **Ноды**: SVG-круги с иконками типа
+- **Активный сегмент пути**: цветное свечение + анимация energy flow (animated stroke-dashoffset)
+- **Мёртвый сегмент** (после разрушенной ноды): opacity 0.08, без анимации, без glow
+- **Ноды**: SVG-круги с иконками типа; разрушенные — пунктирный кружок с `+`
 - **Pan/Zoom**: drag для перемещения, scroll для зума к курсору, pinch-zoom на мобильных
 - **Intro**: анимация открытия дверей + zoom-in
 
@@ -238,8 +253,62 @@ Ghost-ноды показывают иконку типа (?!, пазл, кар�
   - Аудио-буферы декодируются один раз и кешируются в `audioBuffersRef`
   - Looping-пэды визуально: ярче граница, `↺` иконка в углу, другой цвет заливки прогресса
 
+**PHOTO_LOG вкладка**:
+- Сетка фотографий типа `PhotoEntry { src, title, date }`
+- Каждый тайл: изображение + градиентный оверлей снизу с названием и датой
+- Клик → лайтбокс:
+  - Показывает полное изображение, название, дату, счётчик (1/5)
+  - Кнопки ‹ / › по краям — переключение фото
+  - Цикличная навигация (после последнего → первое)
+  - Клавиатура: ←/→ навигация, Escape — закрыть
+  - Клик вне фото — закрыть
+- Пусто → `// NO_PHOTO_LOG`
+
+**VIDEO_FEED вкладка**: iframe-эмбеды. Пусто → `// NO_SIGNAL`.
+
 **Данные семплов** — в `src/constants/gallery.ts`, поле `samples: { label, src }[]`.
-Сейчас заполнено только для `de(A)d ins(I)de` (8 семплов: okay, singalong, bleagh, chorus, guit_intro, bass_verse_2, drums, guit_solo).
+Сейчас заполнено только для `de(A)d ins(I)de` (8 семплов). Для `de(A)d ins(I)de` есть 5 тестовых фото.
+
+---
+
+## Режим Саботёр (Dev)
+
+Галочка **Saboteur** в Dev Tools (красный акцент).
+
+**Модалка ноды (ReviewViewer)** всегда имеет кнопку `×` в правом верхнем углу карточки.
+
+При включённом саботёре:
+- Путь **не** подключён к чипу → кнопка `⚡ DESTROY NODE`
+- Путь **подключён** к чипу → надпись `// completed path cannot be destroyed`
+
+**Процесс уничтожения:**
+1. Модалка закрывается мгновенно
+2. 520ms анимация (CSS + SVG):
+   - Провод от чипа до ноды мигает красным 3 раза (`wire-destroy-flash`)
+   - Кольцо-shockwave расширяется ×4.5 и гаснет + второй ripple с задержкой
+   - Ядро ноды вспыхивает ×1.9 и схлопывается в 0
+   - 8 искр стреляют в 8 направлений и гаснут (SVG `<animate>`)
+3. `reviews[nodeIdx]` = `null` — нода становится пустой
+
+**Пустая нода:**
+- Визуально: пунктирный кружок + `+`
+- Кликабельна → открывает ReviewPopup для повторного заполнения
+- Путь и соседние ноды остаются нетронутыми
+
+**Разрыв в PathSVG:**
+- `breakIdx` = первый `null` в `reviews`
+- До разрыва: цветное свечение + energy flow animation
+- После разрыва: провод opacity 0.08, ноды opacity 0.25, анимации нет
+
+---
+
+## Dev Tools
+
+Фиксированная панель в левом верхнем углу. Содержит:
+
+- **Skip reviews** — пропускает мини-игры при создании нод (ставит заглушку-ревью)
+- **Saboteur** — режим уничтожения нод (см. выше)
+- **Connect all chips** — заменяет все пути на 8 моковых путей от чипа 1 к каждому из 8 остальных (4 прямых + 4 диагональных), по 5 нод на путь, все чипы сразу разблокируются
 
 ---
 
@@ -262,13 +331,17 @@ Ghost-ноды показывают иконку типа (?!, пазл, кар�
 - [x] Встроенный аудиоплеер (play/pause, seek, volume) — Supabase CDN
 - [x] Audio preload кеш — без повторных запросов при нажатии play
 - [x] Галерея чипа с вкладками AUDIO / PHOTO_LOG / VIDEO_FEED
-- [x] SAMPLER_PADS — обычный режим (стоп по повторному клику) + Loop режим (Web Audio API, phase-sync, RAF)
+- [x] PHOTO_LOG: сетка фото с title/date, лайтбокс с навигацией (стрелки, клавиатура, цикл)
+- [x] SAMPLER_PADS — обычный режим + Loop режим (Web Audio API, phase-sync, RAF)
 - [x] Проигрывание фрагментов с fade-in/out и блокировкой плеера
 - [x] Lottie-реакции на чипах (7 реакций, одна на чип)
 - [x] PCB-стилистика
 - [x] Анимации (chip unlock, popup entrance, ghost pulsing, energy flow, intro doors)
+- [x] Режим Саботёр: уничтожение нод с анимацией (wire flash + shockwave + sparks), повторное заполнение
+- [x] Анимация разрыва провода: активный/мёртвый сегменты, тусклые ноды после разрыва
 - [x] Система сложности (7 уровней, distance-based)
 - [x] Все медиафайлы на Supabase (изображения + аудио)
+- [x] Dev Tools: Skip reviews, Saboteur, Connect all chips
 
 ## Что НЕ сделано
 - [ ] Бэкенд, БД, персистенция данных
@@ -276,6 +349,6 @@ Ghost-ноды показывают иконку типа (?!, пазл, кар�
 - [ ] Совместная работа (shared state между пользователями)
 - [ ] SEO + link preview meta
 - [ ] Семплы для 8 из 9 песен (только dead заполнен)
-- [ ] Фото/видео/инструменталы в галерее (пока пусто для всех)
+- [ ] Реальные фото/видео/инструменталы в галерее (только 5 тестовых фото для dead)
 - [ ] Puzzle images для 4 песен (rising, effes, pizda, doshik)
 - [ ] Ещё больше мини-игр (quiz, reaction time, Simon Says)

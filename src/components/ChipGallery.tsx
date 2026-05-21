@@ -11,20 +11,29 @@ interface Props {
 
 export default function ChipGallery({ songLabel, onClose }: Props) {
   const [tab, setTab] = useState<Tab>("AUDIO");
-  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const gallery = SONG_GALLERY[songLabel];
 
-  // Close on Escape
+  const photos = gallery.photos;
+
+  // Close on Escape, navigate with arrows
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (lightboxPhoto) setLightboxPhoto(null);
+        if (lightboxIndex !== null) setLightboxIndex(null);
         else onClose();
+      }
+      if (lightboxIndex !== null && photos.length > 0) {
+        if (e.key === "ArrowRight") {
+          setLightboxIndex((i) => ((i ?? 0) + 1) % photos.length);
+        } else if (e.key === "ArrowLeft") {
+          setLightboxIndex((i) => ((i ?? 0) - 1 + photos.length) % photos.length);
+        }
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [lightboxPhoto, onClose]);
+  }, [lightboxIndex, onClose, photos.length]);
 
   return (
     <>
@@ -135,7 +144,7 @@ export default function ChipGallery({ songLabel, onClose }: Props) {
           <div className="gallery-content relative flex-1 overflow-y-auto p-6">
             {tab === "AUDIO" && <AudioTab gallery={gallery} />}
             {tab === "PHOTO_LOG" && (
-              <PhotoTab gallery={gallery} onLightbox={setLightboxPhoto} />
+              <PhotoTab gallery={gallery} onLightbox={setLightboxIndex} />
             )}
             {tab === "VIDEO_FEED" && <VideoTab gallery={gallery} />}
           </div>
@@ -143,24 +152,122 @@ export default function ChipGallery({ songLabel, onClose }: Props) {
       </div>
 
       {/* Lightbox */}
-      {lightboxPhoto && (
+      {lightboxIndex !== null && photos.length > 0 && (
         <div
           className="fixed inset-0 z-[600] flex items-center justify-center"
           style={{ background: "rgba(0,0,0,0.96)" }}
-          onClick={() => setLightboxPhoto(null)}
+          onClick={() => setLightboxIndex(null)}
         >
-          <img
-            src={lightboxPhoto}
-            alt=""
-            style={{
-              maxWidth: "90vw",
-              maxHeight: "90vh",
-              objectFit: "contain",
-              border: "1px solid rgba(249,206,15,0.2)",
+          {/* Left arrow */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setLightboxIndex((i) => ((i ?? 0) - 1 + photos.length) % photos.length);
             }}
-          />
+            className="absolute left-4 sm:left-8 z-10"
+            style={{
+              background: "rgba(249,206,15,0.06)",
+              border: "1px solid rgba(249,206,15,0.2)",
+              color: "#f9ce0f",
+              fontFamily: "monospace",
+              fontSize: 24,
+              width: 44,
+              height: 44,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              transition: "background 0.15s, border-color 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(249,206,15,0.12)";
+              e.currentTarget.style.borderColor = "rgba(249,206,15,0.5)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(249,206,15,0.06)";
+              e.currentTarget.style.borderColor = "rgba(249,206,15,0.2)";
+            }}
+          >
+            ‹
+          </button>
+
+          {/* Image + info */}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 12,
+              maxWidth: "80vw",
+              maxHeight: "90vh",
+            }}
+          >
+            <img
+              src={photos[lightboxIndex].src}
+              alt={photos[lightboxIndex].title}
+              style={{
+                maxWidth: "80vw",
+                maxHeight: "75vh",
+                objectFit: "contain",
+                border: "1px solid rgba(249,206,15,0.2)",
+              }}
+            />
+            <div
+              style={{
+                fontFamily: "monospace",
+                textAlign: "center",
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+              }}
+            >
+              <div style={{ fontSize: 13, color: "#f9ce0f" }}>
+                {photos[lightboxIndex].title}
+              </div>
+              <div style={{ fontSize: 10, color: "rgba(249,206,15,0.35)" }}>
+                {photos[lightboxIndex].date} &nbsp;·&nbsp; {lightboxIndex + 1}/{photos.length}
+              </div>
+            </div>
+          </div>
+
+          {/* Right arrow */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setLightboxIndex((i) => ((i ?? 0) + 1) % photos.length);
+            }}
+            className="absolute right-4 sm:right-8 z-10"
+            style={{
+              background: "rgba(249,206,15,0.06)",
+              border: "1px solid rgba(249,206,15,0.2)",
+              color: "#f9ce0f",
+              fontFamily: "monospace",
+              fontSize: 24,
+              width: 44,
+              height: 44,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              transition: "background 0.15s, border-color 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(249,206,15,0.12)";
+              e.currentTarget.style.borderColor = "rgba(249,206,15,0.5)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(249,206,15,0.06)";
+              e.currentTarget.style.borderColor = "rgba(249,206,15,0.2)";
+            }}
+          >
+            ›
+          </button>
+
+          {/* Close button */}
           <div
             className="absolute top-6 right-8"
+            onClick={() => setLightboxIndex(null)}
             style={{
               fontFamily: "monospace",
               fontSize: 12,
@@ -1107,7 +1214,7 @@ function PhotoTab({
   onLightbox,
 }: {
   gallery: SongGallery;
-  onLightbox: (src: string) => void;
+  onLightbox: (index: number) => void;
 }) {
   if (gallery.photos.length === 0) {
     return <NoData label="NO_PHOTO_LOG" />;
@@ -1121,10 +1228,10 @@ function PhotoTab({
         gap: 8,
       }}
     >
-      {gallery.photos.map((src, i) => (
+      {gallery.photos.map((photo, i) => (
         <div
           key={i}
-          onClick={() => onLightbox(src)}
+          onClick={() => onLightbox(i)}
           style={{
             aspectRatio: "1",
             overflow: "hidden",
@@ -1143,8 +1250,8 @@ function PhotoTab({
           }}
         >
           <img
-            src={src}
-            alt=""
+            src={photo.src}
+            alt={photo.title}
             style={{
               width: "100%",
               height: "100%",
@@ -1152,6 +1259,28 @@ function PhotoTab({
               display: "block",
             }}
           />
+          {/* Title + date overlay */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              padding: "16px 8px 6px",
+              background: "linear-gradient(transparent, rgba(0,0,0,0.85))",
+              fontFamily: "monospace",
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+            }}
+          >
+            <div style={{ fontSize: 11, color: "#f9ce0f", lineHeight: 1.3 }}>
+              {photo.title}
+            </div>
+            <div style={{ fontSize: 9, color: "rgba(249,206,15,0.35)" }}>
+              {photo.date}
+            </div>
+          </div>
         </div>
       ))}
     </div>

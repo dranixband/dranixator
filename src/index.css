@@ -132,6 +132,30 @@ html, body, #root {
   cursor: pointer;
 }
 
+/* Node destruction animation */
+@keyframes node-destroy-ring {
+  from { opacity: 0.9; transform: scale(1); }
+  to   { opacity: 0;   transform: scale(4.5); }
+}
+@keyframes node-destroy-ring2 {
+  from { opacity: 0.5; transform: scale(1); }
+  to   { opacity: 0;   transform: scale(3); }
+}
+@keyframes node-destroy-core {
+  0%   { opacity: 1; transform: scale(1); }
+  20%  { opacity: 1; transform: scale(1.9); }
+  100% { opacity: 0; transform: scale(0); }
+}
+@keyframes wire-destroy-flash {
+  0%   { opacity: 0; }
+  12%  { opacity: 0.85; }
+  28%  { opacity: 0.15; }
+  48%  { opacity: 0.75; }
+  68%  { opacity: 0.1; }
+  84%  { opacity: 0.5; }
+  100% { opacity: 0; }
+}
+
 /* 3D spinning DRANIX text */
 @keyframes dranix-spin {
   0%   { transform: rotateY(0deg); }

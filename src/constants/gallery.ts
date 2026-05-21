@@ -3,13 +3,19 @@ import type { SongLabel } from "./songs";
 const AUDIO_BASE =
   "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs";
 
+export interface PhotoEntry {
+  src: string;
+  title: string;
+  date: string;
+}
+
 export interface SongGallery {
   /** Demo audio src (reuses chip audioSrc by default) */
   demo?: string;
   /** Instrumental download URL */
   instrumental?: string;
-  /** Photo URLs shown in PHOTO_LOG tab */
-  photos: string[];
+  /** Photo entries shown in PHOTO_LOG tab */
+  photos: PhotoEntry[];
   /** YouTube embed IDs or full embed URLs for VIDEO_FEED tab */
   videos: string[];
   /** Short description shown in the gallery header */
@@ -21,7 +27,33 @@ export interface SongGallery {
 export const SONG_GALLERY: Record<SongLabel, SongGallery> = {
   "de(A)d ins(I)de": {
     demo: `${AUDIO_BASE}/dead.mp3`,
-    photos: [],
+    photos: [
+      {
+        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/dead.jpg",
+        title: "Studio session #1",
+        date: "2025-01-15",
+      },
+      {
+        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/dead.jpg",
+        title: "Tracking guitars",
+        date: "2025-02-03",
+      },
+      {
+        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/dead.jpg",
+        title: "Vocal takes",
+        date: "2025-02-20",
+      },
+      {
+        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/dead.jpg",
+        title: "Mixing day",
+        date: "2025-03-10",
+      },
+      {
+        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/dead.jpg",
+        title: "Final master",
+        date: "2025-03-28",
+      },
+    ],
     videos: [],
     description: "The track that started it all.",
     samples: [
