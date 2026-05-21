@@ -125,18 +125,11 @@ html, body, #root {
 .gallery-btn-close {
   font-family: monospace;
   font-size: 11px;
-  color: rgba(249,206,15,0.35);
-  border: 1px solid rgba(249,206,15,0.16);
+  color: #f9ce0f;
+  border: 1px solid rgba(249,206,15,0.5);
   padding: 5px 12px;
   background: transparent;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
-}
-
-.gallery-btn-close:hover {
-  color: #f9ce0f;
-  border-color: rgba(249,206,15,0.5);
-  background: rgba(249,206,15,0.04);
 }
 
 /* 3D spinning DRANIX text */

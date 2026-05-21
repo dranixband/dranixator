@@ -26,36 +26,36 @@ export const SONG_GALLERY: Record<SongLabel, SongGallery> = {
     description: "The track that started it all.",
     samples: [
       {
-        label: "okay",
-        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/samples/dead/okay.mp3",
+        label: "vox_chorus",
+        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/samples/dead/vox_chorus.mp3",
+      },
+      {
+        label: "guitar_chorus",
+        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/samples/dead/guitar_chorus.mp3",
+      },
+      {
+        label: "drums_chorus",
+        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/samples/dead/drums_chorus.mp3",
+      },
+      {
+        label: "bass_chorus",
+        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/samples/dead/bass_chorus.mp3",
       },
       {
         label: "singalong",
         src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/samples/dead/singalong.mp3",
       },
       {
+        label: "love",
+        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/samples/dead/love.mp3",
+      },
+      {
         label: "bleagh",
         src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/samples/dead/bleagh.mp3",
       },
       {
-        label: "chorus",
-        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/samples/dead/chorus.mp3",
-      },
-      {
-        label: "guit_intro",
-        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/samples/dead/guit_intro.mp3",
-      },
-      {
-        label: "bass_verse_2",
-        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/samples/dead/bass_verse_2.mp3",
-      },
-      {
-        label: "drums",
-        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/samples/dead/drums.mp3",
-      },
-      {
-        label: "guit_solo",
-        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/samples/dead/guit_solo.mp3",
+        label: "okay",
+        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/samples/dead/okay.mp3",
       },
     ],
   },
