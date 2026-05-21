@@ -14,7 +14,15 @@ import type { SongLabel } from "../constants/songs";
 
 type WireColor = "yellow" | "cyan" | "red" | "magenta" | "green" | "orange";
 
-export type NodeType = "prompt" | "rhythm" | "drawing" | "riddle" | "puzzle" | "memory" | "wire" | "wordScramble";
+export type NodeType =
+  | "prompt"
+  | "rhythm"
+  | "drawing"
+  | "riddle"
+  | "puzzle"
+  | "memory"
+  | "wire"
+  | "wordScramble";
 
 interface SongChip {
   id: number;
@@ -81,7 +89,15 @@ interface WordScrambleReview {
   attempts: number;
 }
 
-export type Review = PromptReview | RhythmReview | DrawingReview | RiddleReview | PuzzleReview | MemoryReview | WireReview | WordScrambleReview;
+export type Review =
+  | PromptReview
+  | RhythmReview
+  | DrawingReview
+  | RiddleReview
+  | PuzzleReview
+  | MemoryReview
+  | WireReview
+  | WordScrambleReview;
 
 interface PathData {
   sourceChipId: number;
@@ -106,7 +122,13 @@ function getNodeTypeForPosition(x: number, y: number): NodeType {
   const gx = Math.round(x / GRID);
   const gy = Math.round(y / GRID);
   const idx = ((((gx % 5) + 5) % 5) + (((gy % 5) + 5) % 5)) % 5;
-  const types: NodeType[] = [/* "prompt", */ /* "rhythm", */ /* "drawing", */ "riddle", "puzzle", "memory", "wire", "wordScramble"];
+  const types: NodeType[] = [
+    /* "prompt", */ /* "rhythm", */ /* "drawing", */ "riddle",
+    "puzzle",
+    "memory",
+    "wire",
+    "wordScramble",
+  ];
   return types[idx];
 }
 
@@ -151,15 +173,88 @@ const COLOR_CYCLE: WireColor[] = [
 /* ───── Song chip positions (aligned to 40px grid) ───── */
 
 const SONGS: SongChip[] = [
-  { id: 1, label: "de(A)d ins(I)de", x: 0, y: 0, audioSrc: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/dead.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/dead.jpg" },
-  { id: 2, label: "de[AR] sinner", x: -480, y: -480, audioSrc: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/sinner.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/sinner.jpg" },
-  { id: 3, label: "r{IT}ual", x: 480, y: -480, audioSrc: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/ritual.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/ritual.jpg" },
-  { id: 4, label: "adam & /AI/ve", x: -480, y: 480, audioSrc: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/adam.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/adam.jpg" },
-  { id: 5, label: "samur<AI/> protocol", x: 480, y: 480, audioSrc: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/samurai.mp3", puzzleImage: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/samurai.jpg" },
-  { id: 6, label: "r<AI/>sing", x: 0, y: -480, audioSrc: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/rising.mp3" },
-  { id: 7, label: "effes", x: 0, y: 480, audioSrc: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/effes.mp3" },
-  { id: 8, label: "pizda", x: -480, y: 0, audioSrc: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/Pizda.mp3" },
-  { id: 9, label: "doshik", x: 480, y: 0, audioSrc: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/Doshik.mp3" },
+  {
+    id: 1,
+    label: "de(A)d ins(I)de",
+    x: 0,
+    y: 0,
+    audioSrc:
+      "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/dead.mp3",
+    puzzleImage:
+      "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/dead.jpg",
+  },
+  {
+    id: 2,
+    label: "de[AR] sinner",
+    x: -480,
+    y: -480,
+    audioSrc:
+      "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/sinner.mp3",
+    puzzleImage:
+      "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/sinner.jpg",
+  },
+  {
+    id: 3,
+    label: "r{IT}ual",
+    x: 480,
+    y: -480,
+    audioSrc:
+      "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/ritual.mp3",
+    puzzleImage:
+      "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/ritual.jpg",
+  },
+  {
+    id: 4,
+    label: "adam & /AI/ve",
+    x: -480,
+    y: 480,
+    audioSrc:
+      "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/adam.mp3",
+    puzzleImage:
+      "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/adam.jpg",
+  },
+  {
+    id: 5,
+    label: "samur<AI/> protocol",
+    x: 480,
+    y: 480,
+    audioSrc:
+      "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/samurai.mp3",
+    puzzleImage:
+      "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/samurai.jpg",
+  },
+  {
+    id: 6,
+    label: "r<AI/>sing",
+    x: 0,
+    y: -480,
+    audioSrc:
+      "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/rising.mp3",
+  },
+  {
+    id: 7,
+    label: "effes",
+    x: 0,
+    y: 480,
+    audioSrc:
+      "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/effes.mp3",
+  },
+  {
+    id: 8,
+    label: "pizda",
+    x: -480,
+    y: 0,
+    audioSrc:
+      "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/Pizda.mp3",
+  },
+  {
+    id: 9,
+    label: "doshik",
+    x: 480,
+    y: 0,
+    audioSrc:
+      "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/audio/songs/Doshik.mp3",
+  },
 ];
 
 /* ───── 8-direction offsets ───── */
@@ -418,7 +513,10 @@ export default function Board() {
   } = useAudioPlayer<SongChip>();
   const [skipReview, setSkipReview] = useState(false);
   const [saboteur, setSaboteur] = useState(false);
-  const [destroyingNode, setDestroyingNode] = useState<{ pathIdx: number; nodeIdx: number } | null>(null);
+  const [destroyingNode, setDestroyingNode] = useState<{
+    pathIdx: number;
+    nodeIdx: number;
+  } | null>(null);
   const [refillingNode, setRefillingNode] = useState<{
     pathIdx: number;
     nodeIdx: number;
@@ -431,7 +529,9 @@ export default function Board() {
   const [introOpen, setIntroOpen] = useState(true);
   const [galleryChip, setGalleryChip] = useState<SongChip | null>(null);
   const galleryOpenRef = useRef(false);
-  useEffect(() => { galleryOpenRef.current = galleryChip !== null; }, [galleryChip]);
+  useEffect(() => {
+    galleryOpenRef.current = galleryChip !== null;
+  }, [galleryChip]);
 
   // Reactions: per-chip selected reaction for current user + total counts
   const [chipReactions, setChipReactions] = useState<
@@ -754,7 +854,12 @@ export default function Board() {
       if (dragMoved.current) return;
       if (skipReview) {
         // Place node directly without review
-        const review: Review = { type: "prompt", name: "dev", prompt: "—", text: "—" };
+        const review: Review = {
+          type: "prompt",
+          name: "dev",
+          prompt: "—",
+          text: "—",
+        };
         if (buildingFromChip !== null) {
           const color = COLOR_CYCLE[paths.length % COLOR_CYCLE.length];
           const newPath: PathData = {
@@ -793,8 +898,11 @@ export default function Board() {
           }
         }
       } else {
-        const chipId = buildingFromChip ?? (activePathIdx !== null ? paths[activePathIdx]?.sourceChipId : null);
-        const chip = chipId != null ? SONGS.find((s) => s.id === chipId) : undefined;
+        const chipId =
+          buildingFromChip ??
+          (activePathIdx !== null ? paths[activePathIdx]?.sourceChipId : null);
+        const chip =
+          chipId != null ? SONGS.find((s) => s.id === chipId) : undefined;
         setPendingGhost({
           x: gx,
           y: gy,
@@ -805,8 +913,25 @@ export default function Board() {
           difficulty: (() => {
             const cx = chip?.x ?? 0;
             const cy = chip?.y ?? 0;
-            const cells = Math.max(0, Math.max(Math.abs(gx - cx), Math.abs(gy - cy)) / GRID - CHIP_SIZE / 2 / GRID);
-            const level = cells <= 1 ? 0 : cells <= 2 ? 1 : cells <= 3 ? 2 : cells <= 4 ? 3 : cells <= 6 ? 4 : cells <= 8 ? 5 : 6;
+            const cells = Math.max(
+              0,
+              Math.max(Math.abs(gx - cx), Math.abs(gy - cy)) / GRID -
+                CHIP_SIZE / 2 / GRID,
+            );
+            const level =
+              cells <= 1
+                ? 0
+                : cells <= 2
+                  ? 1
+                  : cells <= 3
+                    ? 2
+                    : cells <= 4
+                      ? 3
+                      : cells <= 6
+                        ? 4
+                        : cells <= 8
+                          ? 5
+                          : 6;
             return level / 6;
           })(),
         });
@@ -911,8 +1036,25 @@ export default function Board() {
       const node = path.nodes[nodeIdx];
       const cx = chip?.x ?? 0;
       const cy = chip?.y ?? 0;
-      const cells = Math.max(0, Math.max(Math.abs(node.x - cx), Math.abs(node.y - cy)) / GRID - CHIP_SIZE / 2 / GRID);
-      const level = cells <= 1 ? 0 : cells <= 2 ? 1 : cells <= 3 ? 2 : cells <= 4 ? 3 : cells <= 6 ? 4 : cells <= 8 ? 5 : 6;
+      const cells = Math.max(
+        0,
+        Math.max(Math.abs(node.x - cx), Math.abs(node.y - cy)) / GRID -
+          CHIP_SIZE / 2 / GRID,
+      );
+      const level =
+        cells <= 1
+          ? 0
+          : cells <= 2
+            ? 1
+            : cells <= 3
+              ? 2
+              : cells <= 4
+                ? 3
+                : cells <= 6
+                  ? 4
+                  : cells <= 8
+                    ? 5
+                    : 6;
       const review = path.reviews[nodeIdx];
       if (!review) {
         // Empty/destroyed node — open refill popup
@@ -926,7 +1068,13 @@ export default function Board() {
           songName,
         });
       } else {
-        setViewingReview({ songName, review, difficulty: level / 6, pathIdx, nodeIdx });
+        setViewingReview({
+          songName,
+          review,
+          difficulty: level / 6,
+          pathIdx,
+          nodeIdx,
+        });
       }
     },
     [paths],
@@ -952,30 +1100,14 @@ export default function Board() {
     [],
   );
 
-  /* ── Saboteur: destroy node (immediate, used internally) ── */
-  const handleDestroyNode = useCallback(
-    (pathIdx: number, nodeIdx: number) => {
-      setPaths((prev) =>
-        prev.map((p, i) => {
-          if (i !== pathIdx) return p;
-          const newReviews = [...p.reviews];
-          newReviews[nodeIdx] = null;
-          return { ...p, reviews: newReviews };
-        }),
-      );
-      setViewingReview(null);
-    },
-    [],
-  );
-
   /* ── Dev: connect all chips with mock paths ── */
   const handleConnectAll = useCallback(() => {
     const R: Review[] = [
-      { type: "riddle",      name: "dev", correct: true },
-      { type: "puzzle",      name: "dev", moves: 10 },
-      { type: "memory",      name: "dev", flips: 6 },
-      { type: "wire",        name: "dev", lines: 4 },
-      { type: "wordScramble",name: "dev", attempts: 1 },
+      { type: "riddle", name: "dev", correct: true },
+      { type: "puzzle", name: "dev", moves: 10 },
+      { type: "memory", name: "dev", flips: 6 },
+      { type: "wire", name: "dev", lines: 4 },
+      { type: "wordScramble", name: "dev", attempts: 1 },
     ];
     const rev = (n: number): Review[] =>
       Array.from({ length: n }, (_, i) => R[i % R.length]);
@@ -984,24 +1116,64 @@ export default function Board() {
       xs.map((x, i) => ({ x, y: ys[i] }));
 
     // Straight paths (5 nodes each: chip-1 anchor → 3 intermediate → target anchor)
-    const up:    PathData = { sourceChipId: 1, color: "yellow", reachedChipId: 6, reviews: rev(5),
-      nodes: pts([0,0,0,0,0], [-80,-160,-240,-320,-400]) };
-    const down:  PathData = { sourceChipId: 1, color: "cyan",   reachedChipId: 7, reviews: rev(5),
-      nodes: pts([0,0,0,0,0], [80,160,240,320,400]) };
-    const left:  PathData = { sourceChipId: 1, color: "red",    reachedChipId: 8, reviews: rev(5),
-      nodes: pts([-80,-160,-240,-320,-400], [0,0,0,0,0]) };
-    const right: PathData = { sourceChipId: 1, color: "yellow", reachedChipId: 9, reviews: rev(5),
-      nodes: pts([80,160,240,320,400], [0,0,0,0,0]) };
+    const up: PathData = {
+      sourceChipId: 1,
+      color: "yellow",
+      reachedChipId: 6,
+      reviews: rev(5),
+      nodes: pts([0, 0, 0, 0, 0], [-80, -160, -240, -320, -400]),
+    };
+    const down: PathData = {
+      sourceChipId: 1,
+      color: "cyan",
+      reachedChipId: 7,
+      reviews: rev(5),
+      nodes: pts([0, 0, 0, 0, 0], [80, 160, 240, 320, 400]),
+    };
+    const left: PathData = {
+      sourceChipId: 1,
+      color: "red",
+      reachedChipId: 8,
+      reviews: rev(5),
+      nodes: pts([-80, -160, -240, -320, -400], [0, 0, 0, 0, 0]),
+    };
+    const right: PathData = {
+      sourceChipId: 1,
+      color: "yellow",
+      reachedChipId: 9,
+      reviews: rev(5),
+      nodes: pts([80, 160, 240, 320, 400], [0, 0, 0, 0, 0]),
+    };
 
     // Diagonal paths (5 nodes each)
-    const tl: PathData = { sourceChipId: 1, color: "cyan",   reachedChipId: 2, reviews: rev(5),
-      nodes: pts([-80,-160,-240,-320,-400], [-80,-160,-240,-320,-400]) };
-    const tr: PathData = { sourceChipId: 1, color: "red",    reachedChipId: 3, reviews: rev(5),
-      nodes: pts([80,160,240,320,400], [-80,-160,-240,-320,-400]) };
-    const bl: PathData = { sourceChipId: 1, color: "yellow", reachedChipId: 4, reviews: rev(5),
-      nodes: pts([-80,-160,-240,-320,-400], [80,160,240,320,400]) };
-    const br: PathData = { sourceChipId: 1, color: "cyan",   reachedChipId: 5, reviews: rev(5),
-      nodes: pts([80,160,240,320,400], [80,160,240,320,400]) };
+    const tl: PathData = {
+      sourceChipId: 1,
+      color: "cyan",
+      reachedChipId: 2,
+      reviews: rev(5),
+      nodes: pts([-80, -160, -240, -320, -400], [-80, -160, -240, -320, -400]),
+    };
+    const tr: PathData = {
+      sourceChipId: 1,
+      color: "red",
+      reachedChipId: 3,
+      reviews: rev(5),
+      nodes: pts([80, 160, 240, 320, 400], [-80, -160, -240, -320, -400]),
+    };
+    const bl: PathData = {
+      sourceChipId: 1,
+      color: "yellow",
+      reachedChipId: 4,
+      reviews: rev(5),
+      nodes: pts([-80, -160, -240, -320, -400], [80, 160, 240, 320, 400]),
+    };
+    const br: PathData = {
+      sourceChipId: 1,
+      color: "cyan",
+      reachedChipId: 5,
+      reviews: rev(5),
+      nodes: pts([80, 160, 240, 320, 400], [80, 160, 240, 320, 400]),
+    };
 
     setPaths([up, down, left, right, tl, tr, bl, br]);
     setUnlockedChips(new Set(SONGS.map((s) => s.id)));
@@ -1026,7 +1198,10 @@ export default function Board() {
       ref={containerRef}
       className="w-screen h-screen overflow-hidden select-none"
       id="pcb-board"
-      style={{ cursor: galleryChip ? "default" : panning ? "grabbing" : "grab", touchAction: "none" }}
+      style={{
+        cursor: galleryChip ? "default" : panning ? "grabbing" : "grab",
+        touchAction: "none",
+      }}
       onMouseDown={galleryChip ? undefined : handleMouseDown}
       onMouseMove={galleryChip ? undefined : handleMouseMove}
       onMouseUp={galleryChip ? undefined : handleMouseUp}
@@ -1112,7 +1287,11 @@ export default function Board() {
               onHeadClick={handleHeadClick}
               onNodeClick={handleNodeClick}
               chipSource={SONGS.find((s) => s.id === path.sourceChipId)!}
-              destroyingNodeIdx={destroyingNode?.pathIdx === idx ? destroyingNode.nodeIdx : undefined}
+              destroyingNodeIdx={
+                destroyingNode?.pathIdx === idx
+                  ? destroyingNode.nodeIdx
+                  : undefined
+              }
             />
           ))}
 
@@ -1142,9 +1321,9 @@ export default function Board() {
             onClick={() => handleChipClick(song.id)}
             onPlay={() => playAudio(song)}
             onGalleryOpen={() => {
-                if (isAudioPlaying) toggleAudioPlayback();
-                setGalleryChip(song);
-              }}
+              if (isAudioPlaying) toggleAudioPlayback();
+              setGalleryChip(song);
+            }}
             selectedReaction={chipReactions[song.id]?.selected ?? null}
             reactionCounts={chipReactions[song.id]?.counts ?? {}}
             onReaction={(reactionId) => handleReaction(song.id, reactionId)}
@@ -1171,8 +1350,13 @@ export default function Board() {
           onSubmit={(review: Review) => handleReviewSubmit(review)}
           onClose={() => setPendingGhost(null)}
           onPlayFragment={(startTime, endTime) => {
-            const chipId = buildingFromChip ?? (activePathIdx !== null ? paths[activePathIdx]?.sourceChipId : null);
-            const chip = chipId != null ? SONGS.find((s) => s.id === chipId) : undefined;
+            const chipId =
+              buildingFromChip ??
+              (activePathIdx !== null
+                ? paths[activePathIdx]?.sourceChipId
+                : null);
+            const chip =
+              chipId != null ? SONGS.find((s) => s.id === chipId) : undefined;
             if (chip) playFragment(chip, startTime, endTime);
           }}
         />
@@ -1190,7 +1374,9 @@ export default function Board() {
           onClose={() => setRefillingNode(null)}
           onPlayFragment={(startTime, endTime) => {
             const path = paths[refillingNode.pathIdx];
-            const chip = path ? SONGS.find((s) => s.id === path.sourceChipId) : undefined;
+            const chip = path
+              ? SONGS.find((s) => s.id === path.sourceChipId)
+              : undefined;
             if (chip) playFragment(chip, startTime, endTime);
           }}
         />
@@ -1291,8 +1477,12 @@ export default function Board() {
             cursor: "pointer",
             transition: "background 0.15s",
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(249,206,15,0.14)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(249,206,15,0.07)"; }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(249,206,15,0.14)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "rgba(249,206,15,0.07)";
+          }}
         >
           Connect all chips
         </button>
@@ -1354,7 +1544,12 @@ export default function Board() {
           onClose={() => setViewingReview(null)}
           saboteur={saboteur}
           canDestroy={paths[viewingReview.pathIdx]?.reachedChipId === undefined}
-          onDestroy={() => triggerDestroyAnimation(viewingReview.pathIdx, viewingReview.nodeIdx)}
+          onDestroy={() =>
+            triggerDestroyAnimation(
+              viewingReview.pathIdx,
+              viewingReview.nodeIdx,
+            )
+          }
         />
       )}
 
@@ -1421,7 +1616,9 @@ function PathSVG({
   const canReactivate = !isComplete && !isActive;
 
   // Find first broken node (null review) — flow stops here
-  const breakIdx = path.reviews.findIndex((r, i) => i < nodes.length && r === null);
+  const breakIdx = path.reviews.findIndex(
+    (r, i) => i < nodes.length && r === null,
+  );
   const hasBreak = breakIdx !== -1;
   const activeEnd = hasBreak ? breakIdx : nodes.length; // exclusive
 
@@ -1430,12 +1627,18 @@ function PathSVG({
   const pointsStr = allPoints.map((p) => `${p.x},${p.y}`).join(" ");
 
   // Active (powered) segment: chip edge → last good node
-  const activePoints = [edgePt, ...nodes.slice(0, activeEnd), ...(!hasBreak && endEdgePt ? [endEdgePt] : [])];
+  const activePoints = [
+    edgePt,
+    ...nodes.slice(0, activeEnd),
+    ...(!hasBreak && endEdgePt ? [endEdgePt] : []),
+  ];
   const activePointsStr = activePoints.map((p) => `${p.x},${p.y}`).join(" ");
 
   // Dead (unpowered) segment: last good node → rest
   const deadStartPt = activeEnd > 0 ? nodes[activeEnd - 1] : edgePt;
-  const deadPoints = hasBreak ? [deadStartPt, ...nodes.slice(breakIdx), ...(endEdgePt ? [endEdgePt] : [])] : null;
+  const deadPoints = hasBreak
+    ? [deadStartPt, ...nodes.slice(breakIdx), ...(endEdgePt ? [endEdgePt] : [])]
+    : null;
   const deadPointsStr = deadPoints?.map((p) => `${p.x},${p.y}`).join(" ") ?? "";
 
   return (
@@ -1500,8 +1703,27 @@ function PathSVG({
             {isEmpty ? (
               /* Destroyed/empty node — dashed outline, clickable to refill */
               <>
-                <circle cx={n.x} cy={n.y} r={7} fill="rgba(0,0,0,0.6)" stroke={color} strokeWidth={1.5} strokeDasharray="3 2" opacity={0.55} />
-                <text x={n.x} y={n.y + 3} textAnchor="middle" fontSize={7} fill={color} fontFamily="monospace" opacity={0.7}>+</text>
+                <circle
+                  cx={n.x}
+                  cy={n.y}
+                  r={7}
+                  fill="rgba(0,0,0,0.6)"
+                  stroke={color}
+                  strokeWidth={1.5}
+                  strokeDasharray="3 2"
+                  opacity={0.55}
+                />
+                <text
+                  x={n.x}
+                  y={n.y + 3}
+                  textAnchor="middle"
+                  fontSize={7}
+                  fill={color}
+                  fontFamily="monospace"
+                  opacity={0.7}
+                >
+                  +
+                </text>
               </>
             ) : (
               <circle
@@ -1530,19 +1752,73 @@ function PathSVG({
             {reviewType === "rhythm" && (
               <g opacity={0.85}>
                 {/* Rhythm bars */}
-                <rect x={n.x - 3.5} y={n.y - 1} width={1.2} height={4} rx={0.4} fill="#000" />
-                <rect x={n.x - 1.5} y={n.y - 3} width={1.2} height={6} rx={0.4} fill="#000" />
-                <rect x={n.x + 0.5} y={n.y - 2} width={1.2} height={5} rx={0.4} fill="#000" />
-                <rect x={n.x + 2.3} y={n.y} width={1.2} height={3} rx={0.4} fill="#000" />
+                <rect
+                  x={n.x - 3.5}
+                  y={n.y - 1}
+                  width={1.2}
+                  height={4}
+                  rx={0.4}
+                  fill="#000"
+                />
+                <rect
+                  x={n.x - 1.5}
+                  y={n.y - 3}
+                  width={1.2}
+                  height={6}
+                  rx={0.4}
+                  fill="#000"
+                />
+                <rect
+                  x={n.x + 0.5}
+                  y={n.y - 2}
+                  width={1.2}
+                  height={5}
+                  rx={0.4}
+                  fill="#000"
+                />
+                <rect
+                  x={n.x + 2.3}
+                  y={n.y}
+                  width={1.2}
+                  height={3}
+                  rx={0.4}
+                  fill="#000"
+                />
               </g>
             )}
             {reviewType === "drawing" && (
               <g opacity={0.85}>
                 {/* 2x2 pixel grid */}
-                <rect x={n.x - 2.5} y={n.y - 2.5} width={2} height={2} fill="#000" />
-                <rect x={n.x + 0.5} y={n.y - 2.5} width={2} height={2} fill="#000" opacity={0.5} />
-                <rect x={n.x - 2.5} y={n.y + 0.5} width={2} height={2} fill="#000" opacity={0.5} />
-                <rect x={n.x + 0.5} y={n.y + 0.5} width={2} height={2} fill="#000" />
+                <rect
+                  x={n.x - 2.5}
+                  y={n.y - 2.5}
+                  width={2}
+                  height={2}
+                  fill="#000"
+                />
+                <rect
+                  x={n.x + 0.5}
+                  y={n.y - 2.5}
+                  width={2}
+                  height={2}
+                  fill="#000"
+                  opacity={0.5}
+                />
+                <rect
+                  x={n.x - 2.5}
+                  y={n.y + 0.5}
+                  width={2}
+                  height={2}
+                  fill="#000"
+                  opacity={0.5}
+                />
+                <rect
+                  x={n.x + 0.5}
+                  y={n.y + 0.5}
+                  width={2}
+                  height={2}
+                  fill="#000"
+                />
               </g>
             )}
             {reviewType === "riddle" && (
@@ -1561,15 +1837,53 @@ function PathSVG({
             )}
             {reviewType === "puzzle" && (
               <g opacity={0.85}>
-                <rect x={n.x - 2.5} y={n.y - 2.5} width={2} height={2} rx={0.3} fill="#000" />
-                <rect x={n.x + 0.5} y={n.y - 2.5} width={2} height={2} rx={0.3} fill="#000" opacity={0.5} />
-                <rect x={n.x - 2.5} y={n.y + 0.5} width={2} height={2} rx={0.3} fill="#000" opacity={0.5} />
+                <rect
+                  x={n.x - 2.5}
+                  y={n.y - 2.5}
+                  width={2}
+                  height={2}
+                  rx={0.3}
+                  fill="#000"
+                />
+                <rect
+                  x={n.x + 0.5}
+                  y={n.y - 2.5}
+                  width={2}
+                  height={2}
+                  rx={0.3}
+                  fill="#000"
+                  opacity={0.5}
+                />
+                <rect
+                  x={n.x - 2.5}
+                  y={n.y + 0.5}
+                  width={2}
+                  height={2}
+                  rx={0.3}
+                  fill="#000"
+                  opacity={0.5}
+                />
               </g>
             )}
             {reviewType === "memory" && (
               <g opacity={0.85}>
-                <rect x={n.x - 2.5} y={n.y - 2} width={2} height={3} rx={0.3} fill="#000" />
-                <rect x={n.x + 0.5} y={n.y - 2} width={2} height={3} rx={0.3} fill="#000" opacity={0.5} />
+                <rect
+                  x={n.x - 2.5}
+                  y={n.y - 2}
+                  width={2}
+                  height={3}
+                  rx={0.3}
+                  fill="#000"
+                />
+                <rect
+                  x={n.x + 0.5}
+                  y={n.y - 2}
+                  width={2}
+                  height={3}
+                  rx={0.3}
+                  fill="#000"
+                  opacity={0.5}
+                />
               </g>
             )}
             {reviewType === "wire" && (
@@ -1590,7 +1904,9 @@ function PathSVG({
               fill="transparent"
               style={{
                 pointerEvents: "all",
-                cursor: (isHead ? canReactivate || hasReview : true) ? "pointer" : "default",
+                cursor: (isHead ? canReactivate || hasReview : true)
+                  ? "pointer"
+                  : "default",
               }}
               onMouseDown={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
@@ -1633,64 +1949,128 @@ function PathSVG({
       })}
 
       {/* Wire flash on destruction — segment from chip edge to dying node */}
-      {destroyingNodeIdx !== undefined && nodes[destroyingNodeIdx] && (() => {
-        const flashPts = [edgePt, ...nodes.slice(0, destroyingNodeIdx + 1)];
-        const flashStr = flashPts.map((p) => `${p.x},${p.y}`).join(" ");
-        return (
-          <polyline
-            key="wire-flash"
-            points={flashStr}
-            fill="none"
-            stroke="#ef4444"
-            strokeWidth={4}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ animation: "wire-destroy-flash 0.52s ease-out forwards" }}
-          />
-        );
-      })()}
+      {destroyingNodeIdx !== undefined &&
+        nodes[destroyingNodeIdx] &&
+        (() => {
+          const flashPts = [edgePt, ...nodes.slice(0, destroyingNodeIdx + 1)];
+          const flashStr = flashPts.map((p) => `${p.x},${p.y}`).join(" ");
+          return (
+            <polyline
+              key="wire-flash"
+              points={flashStr}
+              fill="none"
+              stroke="#ef4444"
+              strokeWidth={4}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{
+                animation: "wire-destroy-flash 0.52s ease-out forwards",
+              }}
+            />
+          );
+        })()}
 
       {/* Destruction animation overlay */}
-      {destroyingNodeIdx !== undefined && nodes[destroyingNodeIdx] && (() => {
-        const dn = nodes[destroyingNodeIdx];
-        const sparks = [
-          [1, 0], [-1, 0], [0, 1], [0, -1],
-          [0.707, 0.707], [-0.707, 0.707], [0.707, -0.707], [-0.707, -0.707],
-        ];
-        return (
-          <g key="destroy-anim">
-            {/* Translated group so transforms are relative to node center */}
-            <g transform={`translate(${dn.x}, ${dn.y})`}>
-              {/* Outer shockwave ring */}
-              <circle r={7} fill="none" stroke="#ef4444" strokeWidth={1.5}
-                style={{ animation: "node-destroy-ring 0.5s ease-out forwards" }}
-              />
-              {/* Second ripple — slight delay */}
-              <circle r={7} fill="none" stroke="#ff6b6b" strokeWidth={1}
-                style={{ animation: "node-destroy-ring2 0.5s ease-out 0.07s forwards", opacity: 0 }}
-              />
-              {/* Core flash + implode */}
-              <circle r={7} fill="#ef4444"
-                style={{ animation: "node-destroy-core 0.5s ease-out forwards" }}
-              />
+      {destroyingNodeIdx !== undefined &&
+        nodes[destroyingNodeIdx] &&
+        (() => {
+          const dn = nodes[destroyingNodeIdx];
+          const sparks = [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1],
+            [0.707, 0.707],
+            [-0.707, 0.707],
+            [0.707, -0.707],
+            [-0.707, -0.707],
+          ];
+          return (
+            <g key="destroy-anim">
+              {/* Translated group so transforms are relative to node center */}
+              <g transform={`translate(${dn.x}, ${dn.y})`}>
+                {/* Outer shockwave ring */}
+                <circle
+                  r={7}
+                  fill="none"
+                  stroke="#ef4444"
+                  strokeWidth={1.5}
+                  style={{
+                    animation: "node-destroy-ring 0.5s ease-out forwards",
+                  }}
+                />
+                {/* Second ripple — slight delay */}
+                <circle
+                  r={7}
+                  fill="none"
+                  stroke="#ff6b6b"
+                  strokeWidth={1}
+                  style={{
+                    animation:
+                      "node-destroy-ring2 0.5s ease-out 0.07s forwards",
+                    opacity: 0,
+                  }}
+                />
+                {/* Core flash + implode */}
+                <circle
+                  r={7}
+                  fill="#ef4444"
+                  style={{
+                    animation: "node-destroy-core 0.5s ease-out forwards",
+                  }}
+                />
+              </g>
+              {/* Spark lines — animate x2/y2 outward */}
+              {sparks.map(([dx, dy], si) => (
+                <line
+                  key={si}
+                  x1={dn.x + dx * 3}
+                  y1={dn.y + dy * 3}
+                  x2={dn.x + dx * 3}
+                  y2={dn.y + dy * 3}
+                  stroke="#ef4444"
+                  strokeWidth={1.3}
+                  strokeLinecap="round"
+                >
+                  <animate
+                    attributeName="x2"
+                    to={`${dn.x + dx * 22}`}
+                    dur="0.38s"
+                    fill="freeze"
+                  />
+                  <animate
+                    attributeName="y2"
+                    to={`${dn.y + dy * 22}`}
+                    dur="0.38s"
+                    fill="freeze"
+                  />
+                  <animate
+                    attributeName="x1"
+                    to={`${dn.x + dx * 11}`}
+                    begin="0.18s"
+                    dur="0.2s"
+                    fill="freeze"
+                  />
+                  <animate
+                    attributeName="y1"
+                    to={`${dn.y + dy * 11}`}
+                    begin="0.18s"
+                    dur="0.2s"
+                    fill="freeze"
+                  />
+                  <animate
+                    attributeName="opacity"
+                    from="0.9"
+                    to="0"
+                    begin="0.22s"
+                    dur="0.28s"
+                    fill="freeze"
+                  />
+                </line>
+              ))}
             </g>
-            {/* Spark lines — animate x2/y2 outward */}
-            {sparks.map(([dx, dy], si) => (
-              <line key={si}
-                x1={dn.x + dx * 3} y1={dn.y + dy * 3}
-                x2={dn.x + dx * 3} y2={dn.y + dy * 3}
-                stroke="#ef4444" strokeWidth={1.3} strokeLinecap="round"
-              >
-                <animate attributeName="x2" to={`${dn.x + dx * 22}`} dur="0.38s" fill="freeze" />
-                <animate attributeName="y2" to={`${dn.y + dy * 22}`} dur="0.38s" fill="freeze" />
-                <animate attributeName="x1" to={`${dn.x + dx * 11}`} begin="0.18s" dur="0.2s" fill="freeze" />
-                <animate attributeName="y1" to={`${dn.y + dy * 11}`} begin="0.18s" dur="0.2s" fill="freeze" />
-                <animate attributeName="opacity" from="0.9" to="0" begin="0.22s" dur="0.28s" fill="freeze" />
-              </line>
-            ))}
-          </g>
-        );
-      })()}
+          );
+        })()}
 
       {/* Energy flow animation — active segment only */}
       {activePoints.length >= 2 && (
@@ -1784,16 +2164,51 @@ function GhostNode({
         )}
         {nodeType === "rhythm" && (
           <>
-            <rect x={x - 4.5} y={y - 1} width={2} height={5} rx={0.5} fill={color} />
-            <rect x={x - 1.5} y={y - 4} width={2} height={8} rx={0.5} fill={color} />
-            <rect x={x + 1.5} y={y - 2.5} width={2} height={6} rx={0.5} fill={color} />
+            <rect
+              x={x - 4.5}
+              y={y - 1}
+              width={2}
+              height={5}
+              rx={0.5}
+              fill={color}
+            />
+            <rect
+              x={x - 1.5}
+              y={y - 4}
+              width={2}
+              height={8}
+              rx={0.5}
+              fill={color}
+            />
+            <rect
+              x={x + 1.5}
+              y={y - 2.5}
+              width={2}
+              height={6}
+              rx={0.5}
+              fill={color}
+            />
           </>
         )}
         {nodeType === "drawing" && (
           <>
             <rect x={x - 3.5} y={y - 3.5} width={3} height={3} fill={color} />
-            <rect x={x + 0.5} y={y - 3.5} width={3} height={3} fill={color} opacity={0.5} />
-            <rect x={x - 3.5} y={y + 0.5} width={3} height={3} fill={color} opacity={0.5} />
+            <rect
+              x={x + 0.5}
+              y={y - 3.5}
+              width={3}
+              height={3}
+              fill={color}
+              opacity={0.5}
+            />
+            <rect
+              x={x - 3.5}
+              y={y + 0.5}
+              width={3}
+              height={3}
+              fill={color}
+              opacity={0.5}
+            />
             <rect x={x + 0.5} y={y + 0.5} width={3} height={3} fill={color} />
           </>
         )}
@@ -1812,18 +2227,84 @@ function GhostNode({
         )}
         {nodeType === "puzzle" && (
           <>
-            <rect x={x - 4} y={y - 4} width={3.5} height={3.5} rx={0.5} fill={color} />
-            <rect x={x + 0.5} y={y - 4} width={3.5} height={3.5} rx={0.5} fill={color} opacity={0.6} />
-            <rect x={x - 4} y={y + 0.5} width={3.5} height={3.5} rx={0.5} fill={color} opacity={0.6} />
-            <rect x={x + 0.5} y={y + 0.5} width={3.5} height={3.5} rx={0.5} fill="none" stroke={color} strokeWidth={0.8} strokeDasharray="1.5 1" />
+            <rect
+              x={x - 4}
+              y={y - 4}
+              width={3.5}
+              height={3.5}
+              rx={0.5}
+              fill={color}
+            />
+            <rect
+              x={x + 0.5}
+              y={y - 4}
+              width={3.5}
+              height={3.5}
+              rx={0.5}
+              fill={color}
+              opacity={0.6}
+            />
+            <rect
+              x={x - 4}
+              y={y + 0.5}
+              width={3.5}
+              height={3.5}
+              rx={0.5}
+              fill={color}
+              opacity={0.6}
+            />
+            <rect
+              x={x + 0.5}
+              y={y + 0.5}
+              width={3.5}
+              height={3.5}
+              rx={0.5}
+              fill="none"
+              stroke={color}
+              strokeWidth={0.8}
+              strokeDasharray="1.5 1"
+            />
           </>
         )}
         {nodeType === "memory" && (
           <>
-            <rect x={x - 4} y={y - 3.5} width={3.5} height={5} rx={0.5} fill={color} />
-            <rect x={x + 0.5} y={y - 3.5} width={3.5} height={5} rx={0.5} fill={color} opacity={0.5} />
-            <text x={x - 2.2} y={y + 0.5} fontSize={3.5} fill="#000" textAnchor="middle" fontWeight="bold">?</text>
-            <text x={x + 2.2} y={y + 0.5} fontSize={3.5} fill="#000" textAnchor="middle" fontWeight="bold">?</text>
+            <rect
+              x={x - 4}
+              y={y - 3.5}
+              width={3.5}
+              height={5}
+              rx={0.5}
+              fill={color}
+            />
+            <rect
+              x={x + 0.5}
+              y={y - 3.5}
+              width={3.5}
+              height={5}
+              rx={0.5}
+              fill={color}
+              opacity={0.5}
+            />
+            <text
+              x={x - 2.2}
+              y={y + 0.5}
+              fontSize={3.5}
+              fill="#000"
+              textAnchor="middle"
+              fontWeight="bold"
+            >
+              ?
+            </text>
+            <text
+              x={x + 2.2}
+              y={y + 0.5}
+              fontSize={3.5}
+              fill="#000"
+              textAnchor="middle"
+              fontWeight="bold"
+            >
+              ?
+            </text>
           </>
         )}
         {nodeType === "wire" && (
@@ -2091,7 +2572,10 @@ function Chip({
                 cursor: "pointer",
                 border: "1px solid rgba(249,206,15,0.3)",
               }}
-              onClick={(e) => { e.stopPropagation(); onPlay(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onPlay();
+              }}
             >
               {isPlaying ? (
                 <svg width="10" height="12" viewBox="0 0 10 12" fill="#f9ce0f">
@@ -2099,7 +2583,13 @@ function Chip({
                   <rect x="6" y="1" width="3" height="10" rx="0.5" />
                 </svg>
               ) : (
-                <svg width="10" height="12" viewBox="0 0 10 12" fill="none" style={{ marginLeft: 1 }}>
+                <svg
+                  width="10"
+                  height="12"
+                  viewBox="0 0 10 12"
+                  fill="none"
+                  style={{ marginLeft: 1 }}
+                >
                   <path d="M1 1L9 6L1 11V1Z" fill="#f9ce0f" />
                 </svg>
               )}
@@ -2120,13 +2610,15 @@ function Chip({
               color: "#f9ce0f",
               userSelect: "none",
             }}
-            onClick={(e) => { e.stopPropagation(); onGalleryOpen(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onGalleryOpen();
+            }}
           >
             ◈
           </div>
         </div>
       )}
-
 
       {/* Status label — bottom */}
       {!unlocked && (
@@ -2309,8 +2801,12 @@ function ReviewViewer({
             padding: "2px 4px",
             transition: "color 0.15s",
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.7)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.3)"; }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = "rgba(255,255,255,0.7)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = "rgba(255,255,255,0.3)";
+          }}
         >
           ×
         </button>
@@ -2330,9 +2826,21 @@ function ReviewViewer({
           </div>
           {(() => {
             const level = Math.round(difficulty * 6);
-            const label = ["Easy", "Easy+", "Medium", "Medium+", "Hard", "Hard+", "Expert"][level];
-            const r = Math.round(difficulty <= 0.5 ? difficulty * 2 * 255 : 255);
-            const g = Math.round(difficulty <= 0.5 ? 255 : (1 - (difficulty - 0.5) * 2) * 255);
+            const label = [
+              "Easy",
+              "Easy+",
+              "Medium",
+              "Medium+",
+              "Hard",
+              "Hard+",
+              "Expert",
+            ][level];
+            const r = Math.round(
+              difficulty <= 0.5 ? difficulty * 2 * 255 : 255,
+            );
+            const g = Math.round(
+              difficulty <= 0.5 ? 255 : (1 - (difficulty - 0.5) * 2) * 255,
+            );
             const color = `rgb(${r},${g},50)`;
             return (
               <div
@@ -2484,7 +2992,9 @@ function ReviewViewer({
               textAlign: "center",
             }}
           >
-            <div style={{ fontSize: 32, marginBottom: 8 }}>{review.correct ? "🧠" : "❌"}</div>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>
+              {review.correct ? "🧠" : "❌"}
+            </div>
             <div
               style={{
                 fontSize: 14,
@@ -2515,7 +3025,8 @@ function ReviewViewer({
                 color: "#d0d0d0",
               }}
             >
-              Solved in <span style={{ color: "#f5c542" }}>{review.moves}</span> moves
+              Solved in <span style={{ color: "#f5c542" }}>{review.moves}</span>{" "}
+              moves
             </div>
           </div>
         )}
@@ -2538,7 +3049,8 @@ function ReviewViewer({
                 color: "#d0d0d0",
               }}
             >
-              Solved in <span style={{ color: "#f5c542" }}>{review.flips}</span> flips
+              Solved in <span style={{ color: "#f5c542" }}>{review.flips}</span>{" "}
+              flips
             </div>
           </div>
         )}
@@ -2561,14 +3073,15 @@ function ReviewViewer({
                 color: "#d0d0d0",
               }}
             >
-              Connected in <span style={{ color: "#f5c542" }}>{review.lines}</span> lines
+              Connected in{" "}
+              <span style={{ color: "#f5c542" }}>{review.lines}</span> lines
             </div>
           </div>
         )}
 
         {/* Saboteur: destroy button or locked notice */}
-        {saboteur && (
-          canDestroy ? (
+        {saboteur &&
+          (canDestroy ? (
             <button
               onClick={onDestroy}
               style={{
@@ -2609,8 +3122,7 @@ function ReviewViewer({
             >
               // completed path cannot be destroyed
             </div>
-          )
-        )}
+          ))}
       </div>
     </div>
   );
