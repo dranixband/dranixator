@@ -748,6 +748,7 @@ function SamplerPads({ samples }: { samples?: { label: string; src: string }[] }
             <button
               key={pad.id}
               onMouseDown={() => triggerPad(pad.id, pad.src)}
+              onTouchStart={(e) => { e.preventDefault(); triggerPad(pad.id, pad.src); }}
               style={{
                 width: padSize,
                 height: padSize,
