@@ -2597,8 +2597,9 @@ function Chip({
           )}
 
           {/* Gallery button */}
+          <div className="gallery-btn-wrap">
           <div
-            className="flex items-center justify-center play-btn"
+            className="flex items-center justify-center play-btn gallery-btn"
             style={{
               width: 24,
               height: 24,
@@ -2615,7 +2616,8 @@ function Chip({
               onGalleryOpen();
             }}
           >
-            ◈
+            <span className="gallery-btn-icon">◈</span>
+          </div>
           </div>
         </div>
       )}

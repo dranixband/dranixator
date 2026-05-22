@@ -18,9 +18,9 @@ export interface WordScrambleData {
 export const WORD_SCRAMBLES: WordScrambleData[] = [
   {
     songLabel: "de(A)d ins(I)de",
-    phrase: "I'm dead inside on the dancefloor 'Cause I'm so scared",
+    phrase: "I'm dead inside on the dancefloor",
     startTime: 34,
-    endTime: 40,
+    endTime: 37,
   },
   {
     songLabel: "de(A)d ins(I)de",

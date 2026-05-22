@@ -1119,8 +1119,7 @@ function SamplerPads({
             return (
               <button
                 key={pad.id}
-                onMouseDown={() => handlePadPress(pad.id, pad.src)}
-                onTouchStart={(e) => {
+                onPointerDown={(e) => {
                   e.preventDefault();
                   handlePadPress(pad.id, pad.src);
                 }}

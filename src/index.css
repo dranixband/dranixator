@@ -118,8 +118,23 @@ html, body, #root {
   background: rgba(249,206,15,0.03);
 }
 
+@keyframes tab-flicker {
+  0%, 100% { color: rgba(249,206,15,0.3); }
+  70%       { color: rgba(249,206,15,0.3); }
+  74%       { color: rgba(249,206,15,0.72); }
+  78%       { color: rgba(249,206,15,0.3); }
+  82%       { color: rgba(249,206,15,0.62); }
+  86%       { color: rgba(249,206,15,0.3); }
+}
+.gallery-tab[data-active="false"] {
+  animation: tab-flicker 6s ease-in-out infinite;
+}
+.gallery-tab[data-active="false"]:nth-child(2) { animation-delay: 1.5s; }
+.gallery-tab[data-active="false"]:nth-child(3) { animation-delay: 3s; }
+
 .gallery-tab:hover:not([data-active="true"]) {
   color: rgba(249,206,15,0.6);
+  animation: none;
 }
 
 .gallery-btn-close {
@@ -232,4 +247,52 @@ html, body, #root {
   transform: scale(1.15);
   box-shadow: 0 0 10px rgba(249,206,15,0.5);
   border-color: rgba(249,206,15,0.7) !important;
+}
+
+/* Gallery button tooltip */
+.gallery-btn-wrap {
+  position: relative;
+}
+.gallery-btn-wrap::after {
+  content: "// CHIP_DATA";
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #000;
+  border: 1px solid rgba(249,206,15,0.4);
+  color: rgba(249,206,15,0.85);
+  font-family: monospace;
+  font-size: 9px;
+  white-space: nowrap;
+  padding: 3px 7px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.gallery-btn-wrap:hover::after {
+  opacity: 1;
+}
+
+/* Gallery button idle animation */
+@keyframes gallery-border-pulse {
+  0%, 100% { box-shadow: 0 0 0px rgba(249,206,15,0); border-color: rgba(249,206,15,0.3); }
+  50%       { box-shadow: 0 0 6px rgba(249,206,15,0.35); border-color: rgba(249,206,15,0.65); }
+}
+@keyframes gallery-icon-spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.gallery-btn {
+  animation: gallery-border-pulse 3s ease-in-out infinite;
+}
+.gallery-btn:hover {
+  animation: none;
+}
+.gallery-btn-icon {
+  display: inline-block;
+  animation: gallery-icon-spin 9s linear infinite;
+}
+.gallery-btn:hover .gallery-btn-icon {
+  animation: gallery-icon-spin 9s linear infinite;
 }
