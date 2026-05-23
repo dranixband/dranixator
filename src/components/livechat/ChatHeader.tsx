@@ -1,5 +1,6 @@
 import Avatar from './Avatar';
 import { AMBER, MONO } from './theme';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import type { ChatProfile } from './types';
 
 interface Props {
@@ -7,11 +8,19 @@ interface Props {
   collapsed: boolean;
   onToggle: () => void;
   onEditProfile: () => void;
+  onPointerDown?: (e: ReactPointerEvent) => void;
 }
 
-export default function ChatHeader({ profile, collapsed, onToggle, onEditProfile }: Props) {
+export default function ChatHeader({
+  profile,
+  collapsed,
+  onToggle,
+  onEditProfile,
+  onPointerDown,
+}: Props) {
   return (
     <div
+      onPointerDown={onPointerDown}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -19,6 +28,9 @@ export default function ChatHeader({ profile, collapsed, onToggle, onEditProfile
         padding: '8px 10px',
         borderBottom: collapsed ? 'none' : '1px solid rgba(249,206,15,0.15)',
         fontFamily: MONO,
+        cursor: 'grab',
+        userSelect: 'none',
+        touchAction: 'none',
       }}
     >
       <span style={{ fontSize: 11, color: AMBER, textTransform: 'uppercase', letterSpacing: 2 }}>
