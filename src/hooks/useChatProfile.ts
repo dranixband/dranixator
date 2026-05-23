@@ -13,7 +13,12 @@ function load(): ChatProfile | null {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const p = JSON.parse(raw);
-    if (p && typeof p.nickname === 'string' && p.avatar && typeof p.avatar.type === 'string') {
+    if (
+      p &&
+      typeof p.nickname === 'string' &&
+      p.avatar &&
+      (p.avatar.type === 'photo' || p.avatar.type === 'generated')
+    ) {
       return p as ChatProfile;
     }
     return null;
