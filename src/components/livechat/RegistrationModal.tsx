@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import AvatarBuilder from './AvatarBuilder';
 import { AMBER, MONO, PANEL_BG, PANEL_SHADOW } from './theme';
 import type { AvatarData, ChatProfile } from './types';
@@ -17,6 +17,15 @@ export default function RegistrationModal({ initial, onSave, onSkip, onClose }: 
   const [avatar, setAvatar] = useState<AvatarData>(
     initial ? initial.avatar : { type: 'generated', seed: nickname || 'guest' },
   );
+
+  // Close on Escape, matching the existing ReviewPopup modal convention.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   const handleSave = () => {
     const nick = nickname.trim();
