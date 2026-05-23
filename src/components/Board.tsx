@@ -9,6 +9,7 @@ import dranixLogo from "../assets/Dranix logo.svg";
 import doorLeft from "../assets/door-left.svg";
 import doorRight from "../assets/door-right.svg";
 import type { SongLabel } from "../constants/songs";
+import { socket } from "../services/socket";
 
 /* ───── Types ───── */
 
@@ -435,55 +436,19 @@ export default function Board() {
   const lastMouse = useRef({ x: 0, y: 0 });
   const lastPinchDist = useRef(0);
 
-  const [paths, setPaths] = useState<PathData[]>(() => [
-    // Mock path: Song 1 → scattered route (6 nodes)
-    {
-      sourceChipId: 1,
-      color: "green",
-      nodes: [
-        { x: 0, y: -120 },
-        { x: 80, y: -120 },
-        { x: 80, y: -200 },
-        { x: 0, y: -200 },
-        { x: -80, y: -200 },
-        { x: -80, y: -280 },
-      ],
-      reviews: [
-        {
-          type: "riddle",
-          name: "Alex",
-          correct: true,
-        },
-        {
-          type: "rhythm",
-          name: "Maria",
-          taps: [0, 320, 640, 960],
-          duration: 1200,
-        },
-        {
-          type: "drawing",
-          name: "DJ_K",
-          imageDataUrl: "",
-        },
-        {
-          type: "puzzle",
-          name: "Luna",
-          moves: 14,
-        },
-        {
-          type: "memory",
-          name: "Max",
-          flips: 8,
-        },
-        {
-          type: "wordScramble",
-          name: "Sasha",
-          attempts: 2,
-        },
-      ],
-    },
-  ]);
+  const [paths, setPaths] = useState<PathData[]>([]);
   const [unlockedChips, setUnlockedChips] = useState<Set<number>>(new Set([1]));
+
+  /* ── Sync board state from backend via websocket ── */
+  useEffect(() => {
+    socket.on("paths:update", (updatedPaths: PathData[]) => {
+      setPaths(updatedPaths);
+    });
+
+    return () => {
+      socket.off("paths:update");
+    };
+  }, []);
   const [activePathIdx, setActivePathIdx] = useState<number | null>(null);
   const [buildingFromChip, setBuildingFromChip] = useState<number | null>(null);
   const [recentlyUnlocked, setRecentlyUnlocked] = useState<Set<number>>(
@@ -869,8 +834,7 @@ export default function Board() {
             reachedChipId: unlocks?.id,
             reviews: [review],
           };
-          const newIdx = paths.length;
-          setPaths((prev) => [...prev, newPath]);
+          socket.emit("path:create", newPath);
           setBuildingFromChip(null);
           if (unlocks) {
             setUnlockedChips((prev) => new Set([...prev, unlocks.id]));
@@ -878,18 +842,19 @@ export default function Board() {
             setTimeout(() => setRecentlyUnlocked(new Set()), 1500);
             setActivePathIdx(null);
           } else {
-            setActivePathIdx(newIdx);
+            setActivePathIdx(paths.length);
           }
         } else if (activePathIdx !== null) {
-          setPaths((prev) => {
-            const next = [...prev];
-            const path = { ...next[activePathIdx] };
-            path.nodes = [...path.nodes, { x: gx, y: gy }];
-            path.reviews = [...path.reviews, review];
-            if (unlocks) path.reachedChipId = unlocks.id;
-            next[activePathIdx] = path;
-            return next;
+          const updatedPaths = paths.map((p, i) => {
+            if (i !== activePathIdx) return p;
+            return {
+              ...p,
+              nodes: [...p.nodes, { x: gx, y: gy }],
+              reviews: [...p.reviews, review],
+              ...(unlocks ? { reachedChipId: unlocks.id } : {}),
+            };
           });
+          socket.emit("paths:update", updatedPaths);
           if (unlocks) {
             setUnlockedChips((prev) => new Set([...prev, unlocks.id]));
             setRecentlyUnlocked(new Set([unlocks.id]));
@@ -969,8 +934,7 @@ export default function Board() {
           reachedChipId: unlocks?.id,
           reviews: [review],
         };
-        const newIdx = paths.length;
-        setPaths((prev) => [...prev, newPath]);
+        socket.emit("path:create", newPath);
         setBuildingFromChip(null);
 
         if (unlocks) {
@@ -979,20 +943,19 @@ export default function Board() {
           setTimeout(() => setRecentlyUnlocked(new Set()), 1500);
           setActivePathIdx(null);
         } else {
-          setActivePathIdx(newIdx);
+          setActivePathIdx(paths.length);
         }
       } else if (activePathIdx !== null) {
-        setPaths((prev) => {
-          const next = [...prev];
-          const path = { ...next[activePathIdx] };
-          path.nodes = [...path.nodes, { x: gx, y: gy }];
-          path.reviews = [...path.reviews, review];
-          if (unlocks) {
-            path.reachedChipId = unlocks.id;
-          }
-          next[activePathIdx] = path;
-          return next;
+        const updatedPaths = paths.map((p, i) => {
+          if (i !== activePathIdx) return p;
+          return {
+            ...p,
+            nodes: [...p.nodes, { x: gx, y: gy }],
+            reviews: [...p.reviews, review],
+            ...(unlocks ? { reachedChipId: unlocks.id } : {}),
+          };
         });
+        socket.emit("paths:update", updatedPaths);
 
         if (unlocks) {
           setUnlockedChips((prev) => new Set([...prev, unlocks.id]));
@@ -1012,17 +975,16 @@ export default function Board() {
     (review: Review) => {
       if (!refillingNode) return;
       const { pathIdx, nodeIdx } = refillingNode;
-      setPaths((prev) =>
-        prev.map((p, i) => {
-          if (i !== pathIdx) return p;
-          const newReviews = [...p.reviews];
-          newReviews[nodeIdx] = review;
-          return { ...p, reviews: newReviews };
-        }),
-      );
+      const updatedPaths = paths.map((p, i) => {
+        if (i !== pathIdx) return p;
+        const newReviews = [...p.reviews];
+        newReviews[nodeIdx] = review;
+        return { ...p, reviews: newReviews };
+      });
+      socket.emit("paths:update", updatedPaths);
       setRefillingNode(null);
     },
-    [refillingNode],
+    [refillingNode, paths],
   );
 
   /* ── Click: placed node → view review ── */
@@ -1086,18 +1048,17 @@ export default function Board() {
       setViewingReview(null);
       setDestroyingNode({ pathIdx, nodeIdx });
       setTimeout(() => {
-        setPaths((prev) =>
-          prev.map((p, i) => {
-            if (i !== pathIdx) return p;
-            const newReviews = [...p.reviews];
-            newReviews[nodeIdx] = null;
-            return { ...p, reviews: newReviews };
-          }),
-        );
+        const updatedPaths = paths.map((p, i) => {
+          if (i !== pathIdx) return p;
+          const newReviews = [...p.reviews];
+          newReviews[nodeIdx] = null;
+          return { ...p, reviews: newReviews };
+        });
+        socket.emit("paths:update", updatedPaths);
         setDestroyingNode(null);
       }, 520);
     },
-    [],
+    [paths],
   );
 
   /* ── Dev: connect all chips with mock paths ── */
@@ -1175,7 +1136,7 @@ export default function Board() {
       nodes: pts([80, 160, 240, 320, 400], [80, 160, 240, 320, 400]),
     };
 
-    setPaths([up, down, left, right, tl, tr, bl, br]);
+    socket.emit("paths:update", [up, down, left, right, tl, tr, bl, br]);
     setUnlockedChips(new Set(SONGS.map((s) => s.id)));
     setActivePathIdx(null);
     setBuildingFromChip(null);
@@ -2598,26 +2559,26 @@ function Chip({
 
           {/* Gallery button */}
           <div className="gallery-btn-wrap">
-          <div
-            className="flex items-center justify-center play-btn gallery-btn"
-            style={{
-              width: 24,
-              height: 24,
-              background: "#000000",
-              borderRadius: 5,
-              cursor: "pointer",
-              border: "1px solid rgba(249,206,15,0.3)",
-              fontSize: 9,
-              color: "#f9ce0f",
-              userSelect: "none",
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              onGalleryOpen();
-            }}
-          >
-            <span className="gallery-btn-icon">◈</span>
-          </div>
+            <div
+              className="flex items-center justify-center play-btn gallery-btn"
+              style={{
+                width: 24,
+                height: 24,
+                background: "#000000",
+                borderRadius: 5,
+                cursor: "pointer",
+                border: "1px solid rgba(249,206,15,0.3)",
+                fontSize: 9,
+                color: "#f9ce0f",
+                userSelect: "none",
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onGalleryOpen();
+              }}
+            >
+              <span className="gallery-btn-icon">◈</span>
+            </div>
           </div>
         </div>
       )}
