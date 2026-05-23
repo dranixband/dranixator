@@ -1,0 +1,34 @@
+import Avatar from './Avatar';
+import { AMBER, MONO } from './theme';
+import { avatarColor } from '../../lib/avatarGen';
+import type { ChatMessage } from './types';
+
+export default function MessageItem({ message }: { message: ChatMessage }) {
+  const nameColor =
+    message.author.avatar.type === 'generated'
+      ? avatarColor(message.author.avatar.seed)
+      : AMBER;
+
+  return (
+    <div
+      className="chat-msg-in"
+      style={{ display: 'flex', gap: 8, padding: '4px 10px', alignItems: 'flex-start' }}
+    >
+      <Avatar avatar={message.author.avatar} size={24} />
+      <div style={{ minWidth: 0, fontFamily: MONO, fontSize: 12, lineHeight: 1.4 }}>
+        <span
+          style={{
+            color: message.isOwn ? AMBER : nameColor,
+            fontWeight: 700,
+            marginRight: 6,
+          }}
+        >
+          {message.author.nickname}
+        </span>
+        <span style={{ color: 'rgba(255,255,255,0.85)', wordBreak: 'break-word' }}>
+          {message.text}
+        </span>
+      </div>
+    </div>
+  );
+}
