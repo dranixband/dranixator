@@ -20,7 +20,9 @@ export default function LiveChat() {
   };
 
   const handleSkip = () => {
-    setProfile(anonymousProfile());
+    // First visit → become Anonymous. Re-opening to edit then skipping must
+    // not wipe an existing identity, so only create a profile when none exists.
+    if (!hasProfile) setProfile(anonymousProfile());
     setShowRegistration(false);
   };
 
