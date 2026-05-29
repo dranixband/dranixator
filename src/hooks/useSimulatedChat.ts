@@ -10,6 +10,10 @@ export function useSimulatedChat() {
     setMessages((prev) => [...prev, m]);
   }, []);
 
+  const updateMessage = useCallback((id: string, patch: Partial<ChatMessage>) => {
+    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+  }, []);
+
   useEffect(() => {
     const schedule = () => {
       const delay = 4000 + Math.random() * 8000; // 4–12s
@@ -24,5 +28,5 @@ export function useSimulatedChat() {
     };
   }, []);
 
-  return { messages, pushMessage };
+  return { messages, pushMessage, updateMessage };
 }
