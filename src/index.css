@@ -356,7 +356,7 @@ html, body, #root {
 /* Emoji picker grid */
 .chat-emoji-grid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(30px, 1fr));
   gap: 2px;
 }
 .chat-emoji-grid button {
