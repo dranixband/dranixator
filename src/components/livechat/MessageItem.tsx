@@ -9,6 +9,8 @@ export default function MessageItem({ message }: { message: ChatMessage }) {
       ? avatarColor(message.author.avatar.seed)
       : AMBER;
 
+  const sending = message.status === 'sending';
+
   return (
     <div
       className="chat-msg-in"
@@ -25,9 +27,22 @@ export default function MessageItem({ message }: { message: ChatMessage }) {
         >
           {message.author.nickname}
         </span>
-        <span style={{ color: 'rgba(255,255,255,0.85)', wordBreak: 'break-word' }}>
+        <span
+          style={{
+            color: 'rgba(255,255,255,0.85)',
+            wordBreak: 'break-word',
+            opacity: sending ? 0.55 : 1,
+          }}
+        >
           {message.text}
         </span>
+        {sending && (
+          <span className="chat-sending-dots" aria-label="sending">
+            <i />
+            <i />
+            <i />
+          </span>
+        )}
       </div>
     </div>
   );
