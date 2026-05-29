@@ -29,13 +29,13 @@ export default function EmojiPicker({ onPick, onClose }: Props) {
   return (
     <div
       ref={ref}
+      className="chat-scroll"
       style={{
         position: 'absolute',
         bottom: 'calc(100% + 6px)',
         left: 8,
-        width: 260,
-        maxHeight: 240,
-        overflowY: 'auto',
+        right: 8,
+        maxHeight: 'calc(var(--chat-window-h, 420px) * 0.55)',
         background: PANEL_BG,
         border: '1px solid rgba(249,206,15,0.25)',
         borderRadius: 8,
