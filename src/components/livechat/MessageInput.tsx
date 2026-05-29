@@ -52,7 +52,14 @@ export default function MessageInput({ onSend }: Props) {
       <div style={{ display: 'flex', gap: 6 }}>
         <button
           type="button"
-          onClick={() => setPickerOpen((o) => !o)}
+          onMouseDown={(e) => {
+            // Toggle on mousedown and stop the event before EmojiPicker's
+            // document mousedown listener fires — otherwise it would close the
+            // picker first and this click would immediately reopen it.
+            e.preventDefault();
+            e.stopPropagation();
+            setPickerOpen((o) => !o);
+          }}
           title="emoji"
           style={{
             fontFamily: MONO,
