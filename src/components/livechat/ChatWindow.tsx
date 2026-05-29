@@ -4,6 +4,7 @@ import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import { MONO, PANEL_BG, PANEL_BORDER, PANEL_SHADOW } from './theme';
 import { useDraggable } from '../../hooks/useDraggable';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import type { ChatMessage, ChatProfile } from './types';
 
 interface Props {
@@ -24,7 +25,26 @@ export default function ChatWindow({
   onSend,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
-  const { position, onPointerDown } = useDraggable(ref, { x: 16, y: 16 });
+  const isMobile = useIsMobile();
+  const { position, onPointerDown } = useDraggable(ref, { x: 16, y: 16 }, isMobile);
+
+  // Layout differs by device + collapsed state.
+  let layout: React.CSSProperties;
+  if (isMobile) {
+    layout = collapsed
+      ? { top: 8, left: 8, width: 'auto', height: 'auto', borderRadius: 8, border: PANEL_BORDER }
+      : { top: 0, left: 0, width: '100vw', height: '70vh', borderRadius: 0, border: PANEL_BORDER };
+  } else {
+    layout = {
+      top: position.y,
+      left: position.x,
+      width: 300,
+      height: collapsed ? 'auto' : 420,
+      maxHeight: 'calc(100vh - 32px)',
+      borderRadius: 8,
+      border: PANEL_BORDER,
+    };
+  }
 
   return (
     <div
@@ -32,14 +52,8 @@ export default function ChatWindow({
       className="chat-boot-enter"
       style={{
         position: 'fixed',
-        top: position.y,
-        left: position.x,
-        width: 300,
-        height: collapsed ? 'auto' : 420,
-        maxHeight: 'calc(100vh - 32px)',
+        ...layout,
         background: PANEL_BG,
-        border: PANEL_BORDER,
-        borderRadius: 8,
         boxShadow: PANEL_SHADOW,
         display: 'flex',
         flexDirection: 'column',
@@ -51,6 +65,7 @@ export default function ChatWindow({
       <ChatHeader
         profile={profile}
         collapsed={collapsed}
+        compact={isMobile && collapsed}
         onToggle={onToggle}
         onEditProfile={onEditProfile}
         onPointerDown={onPointerDown}

@@ -3,6 +3,7 @@ import ChatWindow from './ChatWindow';
 import RegistrationModal from './RegistrationModal';
 import { useChatProfile, anonymousProfile } from '../../hooks/useChatProfile';
 import { useSimulatedChat } from '../../hooks/useSimulatedChat';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import type { ChatMessage, ChatProfile } from './types';
 
 let ownCounter = 0;
@@ -10,7 +11,8 @@ let ownCounter = 0;
 export default function LiveChat() {
   const { profile, setProfile, hasProfile } = useChatProfile();
   const { messages, pushMessage, updateMessage } = useSimulatedChat();
-  const [collapsed, setCollapsed] = useState(false);
+  const isMobile = useIsMobile();
+  const [collapsed, setCollapsed] = useState(isMobile);
   // Auto-open registration on first visit (no stored profile).
   const [showRegistration, setShowRegistration] = useState(() => !hasProfile);
 
@@ -47,6 +49,12 @@ export default function LiveChat() {
 
   return (
     <>
+      {isMobile && !collapsed && (
+        <div
+          onClick={() => setCollapsed(true)}
+          style={{ position: 'fixed', inset: 0, zIndex: 149, background: 'transparent' }}
+        />
+      )}
       <ChatWindow
         profile={activeProfile}
         messages={messages}
