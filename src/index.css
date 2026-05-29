@@ -340,6 +340,19 @@ html, body, #root {
   .chat-sending-dots i { animation: none; opacity: 0.6; }
 }
 
+/* Chat & registration rise out from under the intro doors */
+@keyframes chat-boot-enter {
+  0%   { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.chat-boot-enter {
+  animation: chat-boot-enter 0.5s ease-out both;
+  animation-delay: 1.3s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-boot-enter { animation: none; }
+}
+
 /* Internal scroll without visible scrollbar (board has overflow:hidden) */
 .chat-scroll {
   overflow-y: auto;

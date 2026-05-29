@@ -29,7 +29,7 @@ export default function ChatWindow({
   return (
     <div
       ref={ref}
-      className="review-popup-enter"
+      className="chat-boot-enter"
       style={{
         position: 'fixed',
         top: position.y,
@@ -44,7 +44,7 @@ export default function ChatWindow({
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        zIndex: 900,
+        zIndex: 150,
         fontFamily: MONO,
       }}
     >
