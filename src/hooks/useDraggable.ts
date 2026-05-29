@@ -14,7 +14,11 @@ export interface Position {
  * on a <button> are ignored so handle controls keep working. Movement is clamped
  * so the element stays within the viewport.
  */
-export function useDraggable(ref: RefObject<HTMLElement | null>, initial: Position) {
+export function useDraggable(
+  ref: RefObject<HTMLElement | null>,
+  initial: Position,
+  disabled = false,
+) {
   const [position, setPosition] = useState<Position>(initial);
   const origin = useRef<{ px: number; py: number; ox: number; oy: number } | null>(null);
 
@@ -35,6 +39,7 @@ export function useDraggable(ref: RefObject<HTMLElement | null>, initial: Positi
 
   const onPointerDown = useCallback(
     (e: ReactPointerEvent) => {
+      if (disabled) return; // docked on mobile — no dragging
       if ((e.target as HTMLElement).closest('button')) return; // let handle controls work
       e.preventDefault();
       origin.current = { px: e.clientX, py: e.clientY, ox: position.x, oy: position.y };
@@ -53,7 +58,7 @@ export function useDraggable(ref: RefObject<HTMLElement | null>, initial: Positi
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
     },
-    [clamp, position.x, position.y],
+    [clamp, position.x, position.y, disabled],
   );
 
   return { position, onPointerDown };
