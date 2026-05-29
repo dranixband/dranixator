@@ -1,7 +1,85 @@
+import { useEffect, useRef, useState } from "react";
 import type { SongGallery } from "../../../constants/gallery";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { isYoutubeUrl, getYoutubeThumbnail } from "../helpers";
 import NoData from "./NoData";
+
+function VideoThumbnailElement({ src, title, style }: { src: string; title: string; style: React.CSSProperties }) {
+  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
+  const attemptedRef = useRef(false);
+
+  useEffect(() => {
+    if (attemptedRef.current) return;
+    attemptedRef.current = true;
+
+    const video = document.createElement("video");
+    video.src = src;
+    video.muted = true;
+    (video as HTMLVideoElement & { playsInline: boolean }).playsInline = true;
+    video.crossOrigin = "anonymous";
+    video.preload = "metadata";
+
+    const capture = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth || 320;
+      canvas.height = video.videoHeight || 180;
+      const ctx = canvas.getContext("2d");
+      if (ctx && video.videoWidth > 0) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        try {
+          setThumbUrl(canvas.toDataURL("image/jpeg", 0.7));
+        } catch {
+          // CORS block — fall back to <video> element
+        }
+      }
+      video.src = "";
+    };
+
+    video.addEventListener("seeked", capture, { once: true });
+    video.addEventListener("loadedmetadata", () => {
+      video.currentTime = 0.5;
+    }, { once: true });
+
+    // On iOS, loadedmetadata may not fire without a play call
+    video.addEventListener("canplay", () => {
+      if (video.readyState >= 2 && video.currentTime === 0) {
+        video.currentTime = 0.5;
+      }
+    }, { once: true });
+
+    video.load();
+
+    const playAttempt = video.play();
+    if (playAttempt) {
+      playAttempt.then(() => {
+        video.pause();
+        if (video.currentTime === 0) video.currentTime = 0.5;
+      }).catch(() => {
+        // autoplay blocked, loadedmetadata path is the fallback
+      });
+    }
+
+    return () => {
+      video.src = "";
+    };
+  }, [src]);
+
+  if (thumbUrl) {
+    return <img src={thumbUrl} alt={title} style={style} />;
+  }
+
+  // Fallback: show <video> with playsInline for desktop
+  return (
+    <video
+      src={src}
+      muted
+      playsInline
+      preload="metadata"
+      onLoadedMetadata={(e) => { e.currentTarget.currentTime = 0.5; }}
+      style={{ ...style, pointerEvents: "none" }}
+    />
+  );
+}
 
 export default function VideoTab({
   gallery,
@@ -56,11 +134,10 @@ export default function VideoTab({
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
               />
             ) : isDirectVideo ? (
-              <video
+              <VideoThumbnailElement
                 src={video.src}
-                muted
-                preload="metadata"
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }}
+                title={video.title}
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
               />
             ) : (
               <div
