@@ -88,6 +88,7 @@ export function useAudioPlayer<
       setAudioDuration(0);
 
       audio.onloadedmetadata = () => setAudioDuration(audio.duration);
+      if (audio.readyState >= 1) setAudioDuration(audio.duration);
       audio.onended = () => {
         setIsAudioPlaying(false);
         setAudioProgress(audio.duration);
@@ -151,6 +152,10 @@ export function useAudioPlayer<
         setAudioDuration(audio.duration);
         setAudioProgress(audio.currentTime);
       };
+      if (audio.readyState >= 1) {
+        setAudioDuration(audio.duration);
+        setAudioProgress(audio.currentTime);
+      }
       audio.onended = () => {
         setIsAudioPlaying(false);
         clearInterval(progressIntervalRef.current);

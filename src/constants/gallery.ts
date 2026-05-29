@@ -9,6 +9,15 @@ export interface PhotoEntry {
   date: string;
 }
 
+export interface VideoEntry {
+  /** YouTube embed URL (https://www.youtube.com/embed/VIDEO_ID) or direct video URL */
+  src: string;
+  title: string;
+  date: string;
+  /** Optional thumbnail override; YouTube thumbs are auto-derived if omitted */
+  thumbnail?: string;
+}
+
 export interface SongGallery {
   /** Demo audio src (reuses chip audioSrc by default) */
   demo?: string;
@@ -16,8 +25,8 @@ export interface SongGallery {
   instrumental?: string;
   /** Photo entries shown in PHOTO_LOG tab */
   photos: PhotoEntry[];
-  /** YouTube embed IDs or full embed URLs for VIDEO_FEED tab */
-  videos: string[];
+  /** Video entries shown in VIDEO_FEED tab */
+  videos: VideoEntry[];
   /** Short description shown in the gallery header */
   description?: string;
   /** Sampler pad definitions (up to 8) */
@@ -79,7 +88,28 @@ export const SONG_GALLERY: Record<SongLabel, SongGallery> = {
         date: "2025-03-01",
       },
     ],
-    videos: [],
+    videos: [
+      {
+        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/video/gallery/dead/1)video_2026-05-22_15-09-24.mp4",
+        title: "Rhythm section true love",
+        date: "2025-04-22",
+      },
+      {
+        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/video/gallery/dead/4)IMG_2592.MOV",
+        title: "Deadinsiders",
+        date: "2025-04-25",
+      },
+      {
+        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/video/gallery/dead/IMG_1460.MOV",
+        title: "Drum rec",
+        date: "2025-03-22",
+      },
+      {
+        src: "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/video/gallery/dead/Video%20Project%205.mp4",
+        title: "Lost in neon lights",
+        date: "2024-05-22",
+      },
+    ],
     description: "The track that started it all.",
     samples: [
       {
