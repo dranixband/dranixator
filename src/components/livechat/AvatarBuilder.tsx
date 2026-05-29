@@ -94,9 +94,11 @@ export default function AvatarBuilder({ value, onChange }: Props) {
           <button
             type="button"
             onClick={() => onChange({ type: 'generated', seed: randomSeed() })}
-            style={btnStyle}
+            style={regenStyle}
+            title="regenerate"
           >
-            ↻ REGENERATE
+            <span style={{ fontSize: 19, lineHeight: 1 }}>↻</span>
+            <span style={{ fontSize: 9, letterSpacing: 1 }}>REGENERATE</span>
           </button>
         )}
       </div>
@@ -108,6 +110,18 @@ const btnStyle: React.CSSProperties = {
   fontFamily: MONO,
   fontSize: 10,
   letterSpacing: 1,
+  color: AMBER,
+  border: '1px solid rgba(249,206,15,0.5)',
+  background: 'transparent',
+  padding: '6px 12px',
+  cursor: 'pointer',
+};
+
+const regenStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  fontFamily: MONO,
   color: AMBER,
   border: '1px solid rgba(249,206,15,0.5)',
   background: 'transparent',
