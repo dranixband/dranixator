@@ -1,21 +1,22 @@
 import { useEffect, useState } from 'react';
 import AvatarBuilder from './AvatarBuilder';
+import { randomSeed } from '../../lib/avatarGen';
 import { AMBER, MONO, PANEL_BG, PANEL_SHADOW } from './theme';
 import type { AvatarData, ChatProfile } from './types';
 
 interface Props {
   initial: ChatProfile | null;
   onSave: (p: ChatProfile) => void;
-  onSkip: () => void;
   onClose: () => void;
 }
 
-export default function RegistrationModal({ initial, onSave, onSkip, onClose }: Props) {
+export default function RegistrationModal({ initial, onSave, onClose }: Props) {
   const [nickname, setNickname] = useState(
     initial && initial.nickname !== 'Anonymous' ? initial.nickname : '',
   );
-  const [avatar, setAvatar] = useState<AvatarData>(
-    initial ? initial.avatar : { type: 'generated', seed: nickname || 'guest' },
+  // Random default preview, computed once per open (not 'guest', not from nick).
+  const [avatar, setAvatar] = useState<AvatarData>(() =>
+    initial ? initial.avatar : { type: 'generated', seed: randomSeed() },
   );
 
   // Close on Escape, matching the existing ReviewPopup modal convention.
@@ -30,15 +31,10 @@ export default function RegistrationModal({ initial, onSave, onSkip, onClose }: 
   const handleSave = () => {
     const nick = nickname.trim();
     if (!nick) {
-      onSkip();
+      onClose(); // empty nick → Anonymous branch (handled by onClose on first visit)
       return;
     }
-    // Default generated avatar keys off the chosen nick.
-    const finalAvatar: AvatarData =
-      avatar.type === 'generated' && (avatar.seed === '' || avatar.seed === 'guest')
-        ? { type: 'generated', seed: nick }
-        : avatar;
-    onSave({ nickname: nick, avatar: finalAvatar });
+    onSave({ nickname: nick, avatar });
   };
 
   return (
@@ -51,13 +47,14 @@ export default function RegistrationModal({ initial, onSave, onSkip, onClose }: 
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 1000,
+        zIndex: 180,
       }}
     >
       <div
-        className="review-popup-enter"
+        className="chat-boot-enter"
         onClick={(e) => e.stopPropagation()}
         style={{
+          position: 'relative',
           width: 320,
           background: PANEL_BG,
           border: '1px solid rgba(249,206,15,0.25)',
@@ -70,6 +67,22 @@ export default function RegistrationModal({ initial, onSave, onSkip, onClose }: 
           fontFamily: MONO,
         }}
       >
+        {/* ✕ close — top-right, amber, hover glow */}
+        <button
+          type="button"
+          onClick={onClose}
+          title="close"
+          style={closeStyle}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.textShadow = '0 0 8px rgba(249,206,15,0.8)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.textShadow = 'none';
+          }}
+        >
+          ✕
+        </button>
+
         <div
           style={{
             fontSize: 11,
@@ -102,10 +115,7 @@ export default function RegistrationModal({ initial, onSave, onSkip, onClose }: 
 
         <AvatarBuilder value={avatar} onChange={setAvatar} />
 
-        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-          <button type="button" onClick={onSkip} style={skipStyle}>
-            SKIP
-          </button>
+        <div style={{ display: 'flex', marginTop: 4 }}>
           <button type="button" onClick={handleSave} style={saveStyle}>
             SAVE
           </button>
@@ -115,16 +125,18 @@ export default function RegistrationModal({ initial, onSave, onSkip, onClose }: 
   );
 }
 
-const skipStyle: React.CSSProperties = {
-  flex: 1,
+const closeStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: 10,
+  right: 12,
   fontFamily: MONO,
-  fontSize: 10,
-  letterSpacing: 1,
-  color: 'rgba(249,206,15,0.5)',
-  border: '1px solid rgba(249,206,15,0.2)',
+  fontSize: 14,
+  lineHeight: 1,
+  color: AMBER,
   background: 'transparent',
-  padding: '8px 0',
+  border: 'none',
   cursor: 'pointer',
+  padding: 4,
 };
 
 const saveStyle: React.CSSProperties = {

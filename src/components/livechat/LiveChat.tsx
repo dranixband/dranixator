@@ -19,9 +19,9 @@ export default function LiveChat() {
     setShowRegistration(false);
   };
 
-  const handleSkip = () => {
-    // First visit → become Anonymous. Re-opening to edit then skipping must
-    // not wipe an existing identity, so only create a profile when none exists.
+  const handleClose = () => {
+    // First visit → persist Anonymous (random avatar) for a stable identity.
+    // Re-opening to edit then closing must not wipe an existing identity.
     if (!hasProfile) setProfile(anonymousProfile());
     setShowRegistration(false);
   };
@@ -59,12 +59,7 @@ export default function LiveChat() {
         <RegistrationModal
           initial={profile}
           onSave={handleSave}
-          onSkip={handleSkip}
-          onClose={() => {
-            // Closing without choosing on first visit → treat as skip.
-            if (!hasProfile) handleSkip();
-            else setShowRegistration(false);
-          }}
+          onClose={handleClose}
         />
       )}
     </>
