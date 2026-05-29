@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useSendThrottle } from '../../hooks/useSendThrottle';
 import { AMBER, MONO, MAX_MESSAGE_LEN } from './theme';
 
@@ -8,14 +8,17 @@ interface Props {
 
 export default function MessageInput({ onSend }: Props) {
   const [text, setText] = useState('');
-  const { canSend, secondsLeft, registerSend } = useSendThrottle();
+  const { canSend, registerSend } = useSendThrottle();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const submit = () => {
     const t = text.trim();
-    if (!t || !canSend) return;
+    if (!t) return;
+    if (!canSend) return; // silent anti-spam gate
     onSend(t);
     registerSend();
     setText('');
+    inputRef.current?.focus();
   };
 
   const handleKey = (e: React.KeyboardEvent) => {
@@ -37,10 +40,11 @@ export default function MessageInput({ onSend }: Props) {
     >
       <div style={{ display: 'flex', gap: 6 }}>
         <input
+          ref={inputRef}
           value={text}
           maxLength={MAX_MESSAGE_LEN}
-          placeholder={canSend ? 'say something...' : `wait ${secondsLeft}s...`}
-          disabled={!canSend}
+          placeholder="say something..."
+          autoFocus
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKey}
           style={{
@@ -52,27 +56,26 @@ export default function MessageInput({ onSend }: Props) {
             border: '1px solid rgba(249,206,15,0.3)',
             padding: '6px 8px',
             outline: 'none',
-            opacity: canSend ? 1 : 0.6,
           }}
         />
         <button
           type="button"
           onClick={submit}
-          disabled={!canSend || !text.trim()}
+          disabled={!text.trim()}
           style={{
             fontFamily: MONO,
             fontSize: 11,
             letterSpacing: 1,
             color: '#000',
-            background: canSend && text.trim() ? AMBER : 'rgba(249,206,15,0.3)',
+            background: text.trim() ? AMBER : 'rgba(249,206,15,0.3)',
             border: 'none',
             padding: '0 12px',
-            cursor: canSend && text.trim() ? 'pointer' : 'default',
+            cursor: text.trim() ? 'pointer' : 'default',
             fontWeight: 700,
             minWidth: 56,
           }}
         >
-          {canSend ? 'SEND' : `${secondsLeft}s`}
+          SEND
         </button>
       </div>
       <div
