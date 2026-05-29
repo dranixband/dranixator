@@ -19,4 +19,5 @@ export interface ChatMessage {
   ts: number;
   isOwn?: boolean;
   isBot?: boolean;
+  status?: 'sending' | 'sent'; // absence = 'sent' (bots & seed messages)
 }
