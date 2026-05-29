@@ -353,6 +353,25 @@ html, body, #root {
   .chat-boot-enter { animation: none; }
 }
 
+/* Emoji picker grid */
+.chat-emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+}
+.chat-emoji-grid button {
+  font-size: 16px;
+  line-height: 1;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  padding: 4px;
+  cursor: pointer;
+}
+.chat-emoji-grid button:hover {
+  background: rgba(249, 206, 15, 0.12);
+}
+
 /* Internal scroll without visible scrollbar (board has overflow:hidden) */
 .chat-scroll {
   overflow-y: auto;
