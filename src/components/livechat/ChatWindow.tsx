@@ -58,6 +58,11 @@ export default function ChatWindow({
 
   const showResizeGrip = !isMobile && !collapsed;
 
+  // Expose the live window height to descendants (the emoji picker sizes to it).
+  const cssVars = {
+    '--chat-window-h': isMobile ? '70vh' : `${size.height}px`,
+  } as React.CSSProperties;
+
   return (
     <div
       ref={ref}
@@ -72,6 +77,7 @@ export default function ChatWindow({
         overflow: 'hidden',
         zIndex: 150,
         fontFamily: MONO,
+        ...cssVars,
       }}
     >
       <ChatHeader
