@@ -9,7 +9,7 @@ let ownCounter = 0;
 
 export default function LiveChat() {
   const { profile, setProfile, hasProfile } = useChatProfile();
-  const { messages, pushMessage } = useSimulatedChat();
+  const { messages, pushMessage, updateMessage } = useSimulatedChat();
   const [collapsed, setCollapsed] = useState(false);
   // Auto-open registration on first visit (no stored profile).
   const [showRegistration, setShowRegistration] = useState(() => !hasProfile);
@@ -29,14 +29,17 @@ export default function LiveChat() {
   const handleSend = (text: string) => {
     const active = profile ?? anonymousProfile();
     ownCounter += 1;
+    const id = `own-${Date.now()}-${ownCounter}`;
     const msg: ChatMessage = {
-      id: `own-${Date.now()}-${ownCounter}`,
+      id,
       author: { nickname: active.nickname, avatar: active.avatar },
       text,
       ts: Date.now(),
       isOwn: true,
+      status: 'sending',
     };
     pushMessage(msg);
+    window.setTimeout(() => updateMessage(id, { status: 'sent' }), 700);
   };
 
   // Use a working profile for the window even before save (Anonymous preview).
