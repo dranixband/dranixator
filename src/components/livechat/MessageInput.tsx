@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useSendThrottle } from '../../hooks/useSendThrottle';
+import EmojiPicker from './EmojiPicker';
 import { AMBER, MONO, MAX_MESSAGE_LEN } from './theme';
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
 
 export default function MessageInput({ onSend }: Props) {
   const [text, setText] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
   const { canSend, registerSend } = useSendThrottle();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -28,9 +30,15 @@ export default function MessageInput({ onSend }: Props) {
     }
   };
 
+  const handlePick = (emoji: string) => {
+    setText((t) => (t + emoji).slice(0, MAX_MESSAGE_LEN));
+    inputRef.current?.focus();
+  };
+
   return (
     <div
       style={{
+        position: 'relative',
         borderTop: '1px solid rgba(249,206,15,0.15)',
         padding: 8,
         display: 'flex',
@@ -38,7 +46,27 @@ export default function MessageInput({ onSend }: Props) {
         gap: 4,
       }}
     >
+      {pickerOpen && (
+        <EmojiPicker onPick={handlePick} onClose={() => setPickerOpen(false)} />
+      )}
       <div style={{ display: 'flex', gap: 6 }}>
+        <button
+          type="button"
+          onClick={() => setPickerOpen((o) => !o)}
+          title="emoji"
+          style={{
+            fontFamily: MONO,
+            fontSize: 14,
+            lineHeight: 1,
+            color: AMBER,
+            background: 'transparent',
+            border: '1px solid rgba(249,206,15,0.3)',
+            padding: '0 8px',
+            cursor: 'pointer',
+          }}
+        >
+          {pickerOpen ? '☻' : '🙂'}
+        </button>
         <input
           ref={inputRef}
           value={text}
