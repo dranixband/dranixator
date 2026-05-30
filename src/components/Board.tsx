@@ -4,6 +4,7 @@ import lottie from "lottie-web";
 import ReviewPopup from "./ReviewPopup";
 import ChipGallery from "./ChipGallery";
 import { useAudioPlayer } from "../hooks/useAudioPlayer";
+import { useIsMobile } from "../hooks/useIsMobile";
 import chipImg from "../assets/Chip.jpg";
 import dranixLogo from "../assets/Dranix logo.svg";
 import doorLeft from "../assets/door-left.svg";
@@ -427,6 +428,7 @@ export default function Board() {
   }, []);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
   const initialized = useRef(false);
   const [view, setView] = useState<ViewState>({ x: 0, y: 0, scale: 1 });
   const [panning, setPanning] = useState(false);
@@ -1406,7 +1408,7 @@ export default function Board() {
 
       {/* Dev Tools */}
       <div
-        className="fixed top-4 left-4"
+        className={isMobile ? "fixed bottom-4 left-4" : "fixed top-4 left-4"}
         style={{
           zIndex: 100,
           background: "rgba(0,0,0,0.85)",
