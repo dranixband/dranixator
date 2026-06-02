@@ -18,6 +18,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@locator/babel-jsx": "^0.5.1",
+    "@locator/runtime": "^0.5.1",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -28,6 +30,7 @@
     "globals": "^17.5.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",
-    "vite": "^8.0.10"
+    "vite": "^8.0.10",
+    "vite-plugin-babel": "^1.7.3"
   }
 }
