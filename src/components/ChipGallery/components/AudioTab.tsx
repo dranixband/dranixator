@@ -2,10 +2,14 @@ import { useRef, useState, useEffect } from "react";
 import type { SongGallery } from "../../../constants/gallery";
 import SamplerPads from "./SamplerPads";
 import NoData from "./NoData";
+import SeekBar from "../../PlayerControls/SeekBar";
+import VolumeSlider from "../../PlayerControls/VolumeSlider";
+import TimeDisplay from "../../PlayerControls/TimeDisplay";
+import { useIsMobile } from "../../../hooks/useIsMobile";
 
 export default function AudioTab({ gallery }: { gallery: SongGallery }) {
+  const isMobile = useIsMobile();
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const volBarRef = useRef<HTMLDivElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -43,42 +47,13 @@ export default function AudioTab({ gallery }: { gallery: SongGallery }) {
     }
   }
 
-  function handleSeek(e: React.MouseEvent<HTMLDivElement>) {
+  function handleSeek(fraction: number) {
     const a = audioRef.current;
     if (!a || !a.duration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const ratio = (e.clientX - rect.left) / rect.width;
-    a.currentTime = ratio * a.duration;
-    setProgress(ratio);
+    a.currentTime = fraction * a.duration;
+    setProgress(fraction);
   }
 
-  function volFraction(e: MouseEvent | React.MouseEvent) {
-    const bar = volBarRef.current;
-    if (!bar) return null;
-    const rect = bar.getBoundingClientRect();
-    return Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-  }
-
-  function handleVolMouseDown(e: React.MouseEvent) {
-    const f = volFraction(e);
-    if (f !== null) setVolume(f);
-    const onMove = (ev: MouseEvent) => {
-      const fr = volFraction(ev);
-      if (fr !== null) setVolume(fr);
-    };
-    const onUp = () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  }
-
-  function fmt(s: number) {
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
-    return `${m}:${sec.toString().padStart(2, "0")}`;
-  }
 
   if (!gallery.demo) {
     return <NoData label="NO_AUDIO_FEED" />;
@@ -140,129 +115,27 @@ export default function AudioTab({ gallery }: { gallery: SongGallery }) {
           )}
         </button>
 
-        {/* Label + progress bar stacked in the middle */}
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-            minWidth: 0,
-          }}
-        >
-          <span
-            style={{
-              fontFamily: "monospace",
-              fontSize: 9,
-              color: "rgba(249,206,15,0.3)",
-              letterSpacing: 2,
-            }}
-          >
+        {/* Label + progress bar */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+          <span style={{ fontFamily: "monospace", fontSize: 9, color: "rgba(249,206,15,0.3)", letterSpacing: 2 }}>
             DEMO_RECORDING
           </span>
-          <div
-            onClick={handleSeek}
-            style={{
-              width: "100%",
-              height: 8,
-              background: "rgba(249,206,15,0.1)",
-              cursor: "pointer",
-              position: "relative",
-            }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                left: 0,
-                top: 0,
-                height: "100%",
-                width: `${progress * 100}%`,
-                background: "#f9ce0f",
-                transition: "width 0.1s linear",
-              }}
-            />
-          </div>
+          <SeekBar progress={progress} duration={duration} onSeek={handleSeek} />
+          {isMobile && (
+            <div style={{ display: "flex", alignItems: "center", marginTop: 4 }}>
+              <TimeDisplay current={currentTime} duration={duration} />
+              <div style={{ flex: 1 }} />
+              <VolumeSlider volume={volume} onChange={setVolume} />
+            </div>
+          )}
         </div>
 
-        {/* Time */}
-        <span
-          style={{
-            fontFamily: "monospace",
-            fontSize: 10,
-            color: "rgba(249,206,15,0.45)",
-            flexShrink: 0,
-          }}
-        >
-          {fmt(currentTime)} / {duration > 0 ? fmt(duration) : "--:--"}
-        </span>
-
-        {/* Volume */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-            flexShrink: 0,
-          }}
-        >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 16 16"
-            fill="rgba(249,206,15,0.35)"
-          >
-            <path d="M2 5.5h2.5L8 2v12L4.5 10.5H2a1 1 0 01-1-1v-3a1 1 0 011-1z" />
-            {volume > 0.01 && (
-              <path
-                d="M10 5.5a3.5 3.5 0 010 5"
-                fill="none"
-                stroke="rgba(249,206,15,0.35)"
-                strokeWidth="1.3"
-              />
-            )}
-            {volume > 0.5 && (
-              <path
-                d="M11.5 3.5a6 6 0 010 9"
-                fill="none"
-                stroke="rgba(249,206,15,0.2)"
-                strokeWidth="1.3"
-              />
-            )}
-          </svg>
-          <div
-            ref={volBarRef}
-            onMouseDown={handleVolMouseDown}
-            style={{
-              width: 44,
-              height: 3,
-              background: "rgba(249,206,15,0.1)",
-              borderRadius: 2,
-              cursor: "pointer",
-              position: "relative",
-            }}
-          >
-            <div
-              style={{
-                width: `${volume * 100}%`,
-                height: "100%",
-                background: "rgba(249,206,15,0.5)",
-                borderRadius: 2,
-              }}
-            />
-            <div
-              style={{
-                position: "absolute",
-                left: `${volume * 100}%`,
-                top: "50%",
-                transform: "translate(-50%, -50%)",
-                width: 7,
-                height: 7,
-                borderRadius: "50%",
-                background: "#f9ce0f",
-              }}
-            />
-          </div>
-        </div>
+        {!isMobile && (
+          <>
+            <TimeDisplay current={currentTime} duration={duration} />
+            <VolumeSlider volume={volume} onChange={setVolume} />
+          </>
+        )}
 
         <audio
           ref={audioRef}
