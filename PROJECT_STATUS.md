@@ -4,20 +4,27 @@
 Интерактивная PCB-плата (печатная плата), где пользователи строят связи между "чипами" (песнями), проходя мини-игры. Каждая нода = одна точка на пути. Когда путь достигает заблокированного чипа — он разблокируется и становится новой точкой для строительства.
 
 ## Стек
-- React 19 + TypeScript + Vite
+- React 19 + TypeScript + Vite 8 + Rolldown
 - Tailwind CSS v4
 - lottie-web (анимированные реакции)
+- @locator/babel-jsx + @locator/runtime — LocatorJS (клик на элемент → открытие в редакторе, только dev)
 - Клиентский state (без бэкенда)
 
 ---
 
 ## Структура файлов
 
-| Файл | Назначение |
+| Файл/Папка | Назначение |
 |------|-----------|
-| `src/components/Board.tsx` | Главный компонент: сетка, чипы, SVG-провода, ноды, pan/zoom, аудиоплеер, реакции, вся логика |
+| `src/components/Board.tsx` | Главный компонент: сетка, чипы, SVG-провода, ноды, pan/zoom, реакции, вся логика |
+| `src/components/AudioPlayerBar/` | Аудиоплеер внизу экрана: play/pause, seek, volume, SubmitHub CTA, streaming иконки |
+| `src/components/AudioPlayerBar/StreamingIcons.tsx` | SVG иконки Spotify / Apple / YouTube Music |
+| `src/components/PlayerControls/SeekBar.tsx` | Переиспользуемый прогресс-бар: hover-кружок, таймкод, preview fill, mouse+touch scrubbing |
+| `src/components/PlayerControls/VolumeSlider.tsx` | Переиспользуемый слайдер громкости: mute-toggle, mouse+touch drag |
+| `src/components/PlayerControls/TimeDisplay.tsx` | Переиспользуемый таймкод `0:00 / 3:35` в жёлтом цвете |
+| `src/components/DevTools/` | Dev-панель: Skip reviews, Saboteur, Connect all chips |
 | `src/components/ReviewPopup.tsx` | Попап для создания ноды (маршрутизация к мини-играм) |
-| `src/components/ChipGallery.tsx` | Галерея чипа — вкладки AUDIO / PHOTO_LOG / VIDEO_FEED |
+| `src/components/ChipGallery/` | Галерея чипа — вкладки AUDIO / PHOTO_LOG / VIDEO_FEED |
 | `src/components/EmojiRiddle.tsx` | Угадай трек по 3 эмодзи |
 | `src/components/SlidingPuzzle.tsx` | Слайдинг-пазл 3×3 с обложкой альбома |
 | `src/components/MemoryGame.tsx` | Найди пары карточек (4×2) |
@@ -26,11 +33,12 @@
 | `src/components/PixelCanvas.tsx` | Пиксельарт редактор 48×48 (отключён) |
 | `src/components/RhythmTap.tsx` | Ритм-тап игра (отключена) |
 | `src/constants/songs.ts` | Список песен (SongLabel type — source of truth) |
+| `src/constants/submithubLinks.ts` | SubmitHub landing ссылки по песням (добавлять по мере выхода на стримингах) |
 | `src/constants/gallery.ts` | Данные галереи — demo, photos: PhotoEntry[], videos, samples[] |
 | `src/constants/riddles.ts` | Эмодзи-загадки |
 | `src/constants/lyrics.ts` | Тексты песен |
 | `src/constants/wordScrambles.ts` | Фразы для Word Scramble + таймкоды аудио |
-| `src/index.css` | PCB-стили фона, анимации (chip-unlock, popup-enter, node-hover, node-destroy-*, wire-destroy-flash) |
+| `src/index.css` | PCB-стили фона, анимации (chip-unlock, popup-enter, node-hover, node-destroy-*, wire-destroy-flash, player-listen-link flicker) |
 | `src/lib/audioCache.ts` | Кеш Audio объектов — preloadAudio / getCachedAudio |
 | `public/lottie/` | JSON-анимации для реакций |
 | `public/samples/` | Локальный заглушка sample.mp3 (fallback для пэдов) |
@@ -163,10 +171,15 @@ Ghost-ноды показывают иконку типа (?!, пазл, кар�
 
 ---
 
-## Аудиоплеер
+## Аудиоплеер (AudioPlayerBar)
 
-- Встроенный плеер в нижней части экрана (фиксированный, 30% ширины, полупрозрачный с backdrop-blur)
-- Play/Pause, прогресс-бар с перемоткой, регулятор громкости
+- Фиксированный внизу экрана, 50% ширины десктоп / `calc(100vw - 32px)` мобайл, полупрозрачный с backdrop-blur
+- Play/Pause, прогресс-бар с перемоткой, регулятор громкости, кнопка закрытия
+- **SeekBar**: hover-кружок на текущей позиции, preview fill, таймкод на курсоре, mouse scrubbing + touch scrubbing
+- **VolumeSlider**: mute/unmute по клику на иконку (запоминает предыдущую громкость), mouse + touch drag
+- **Мобайл**: 2 ряда — [▶ название / listen link × ] / [время · · громкость]
+- **SubmitHub CTA**: `// listen on streaming ↗` + иконки Spotify / Apple / YouTube Music с анимацией broken-lamp (мигает как сломанная лампочка)
+- Ссылки на SubmitHub лендинги в `src/constants/submithubLinks.ts` — появляется только если ссылка есть
 - Все 9 песен подключены через Supabase CDN
 - Preload: Board.tsx загружает все треки на маунт через `preloadAudio()`, `useAudioPlayer` переиспользует кешированные Audio объекты через `getCachedAudio()` — повторных сетевых запросов нет
 - Проигрывание фрагментов при успехе в Word Scramble (fade-in/out 0.5 сек, авто-пауза)
@@ -230,15 +243,16 @@ Ghost-ноды показывают иконку типа (?!, пазл, кар�
 **Кнопка ◈ на чипе**:
 - Медленно вращает иконку ◈ (9s linear infinite) — привлекает внимание без hover
 - Граница кнопки пульсирует жёлтым (3s ease-in-out infinite)
-- На hover: вращение продолжается, border/glow из `.play-btn:hover` накладываются поверх
-- Tooltip `// CHIP_DATA` над кнопкой при hover (CSS `::after`, monospace, fade 0.15s)
+- На hover (только десктоп, `@media (hover: hover)`): border/glow из `.play-btn:hover` накладываются поверх
+- Tooltip `// CHIP_DATA` над кнопкой при hover (только десктоп, `@media (hover: hover)`, CSS `::after`, monospace, fade 0.15s)
 
 **Вкладки**: `// AUDIO`, `// PHOTO_LOG`, `// VIDEO_FEED`
 
 Неактивные вкладки мерцают (double-flicker, 6s цикл, сдвинуты по фазе) — подсказывают что можно переключиться. На hover анимация останавливается.
 
 **AUDIO вкладка**:
-- Плеер: компактная одна строка — [▶] слева, по центру лейбл DEMO_RECORDING + прогресс-бар (4px), справа время и громкость
+- Плеер: [▶] + DEMO_RECORDING + SeekBar + время + VolumeSlider — всё в одну строку (десктоп) / время и громкость на второй строке (мобайл)
+- SeekBar и VolumeSlider переиспользованы из `src/components/PlayerControls/` (те же компоненты что в AudioPlayerBar)
 - Инструментал: одна тонкая строка `INSTRUMENTAL · filename · [⬇ DL]` без лишних отступов
 - CSS 3D анимация "DRANIX" (rotateY)
 - **SAMPLER_PADS**: 8 MIDI-пэдов (150×150px desktop, 75×75px mobile), 4 колонки
@@ -312,7 +326,7 @@ Ghost-ноды показывают иконку типа (?!, пазл, кар�
 
 ## Dev Tools
 
-Фиксированная панель в левом верхнем углу. Содержит:
+Вынесен в `src/components/DevTools/`. Фиксированная панель: десктоп — левый верхний угол; мобайл — левый нижний, поднимается выше когда открыт аудиоплеер (`bottom-35` vs `bottom-4`).
 
 - **Skip reviews** — пропускает мини-игры при создании нод (ставит заглушку-ревью)
 - **Saboteur** — режим уничтожения нод (см. выше)
@@ -336,7 +350,10 @@ Ghost-ноды показывают иконку типа (?!, пазл, кар�
 - [x] 5 активных мини-игр: riddle, puzzle, memory, wire, wordScramble
 - [x] Шахматная карта типов нод по координатам (% 5)
 - [x] Word Scramble: слоты, drag-and-drop, лимит попыток, подсветка, фрагмент аудио
-- [x] Встроенный аудиоплеер (play/pause, seek, volume) — Supabase CDN
+- [x] Аудиоплеер (play/pause, seek+scrubbing, volume+mute) — Supabase CDN
+- [x] SeekBar: hover-кружок, preview fill, таймкод, mouse+touch scrubbing — переиспользуется в обоих плеерах
+- [x] VolumeSlider: mute toggle, mouse+touch drag — переиспользуется в обоих плеерах
+- [x] SubmitHub CTA в плеере: `// listen on streaming ↗` + Spotify/Apple/YouTube иконки, broken-lamp анимация
 - [x] Audio preload кеш — без повторных запросов при нажатии play
 - [x] Галерея чипа с вкладками AUDIO / PHOTO_LOG / VIDEO_FEED
 - [x] PHOTO_LOG: сетка фото с title/date, лайтбокс с навигацией (стрелки, клавиатура, цикл)
@@ -349,7 +366,10 @@ Ghost-ноды показывают иконку типа (?!, пазл, кар�
 - [x] Анимация разрыва провода: активный/мёртвый сегменты, тусклые ноды после разрыва
 - [x] Система сложности (7 уровней, distance-based)
 - [x] Все медиафайлы на Supabase (изображения + аудио)
-- [x] Dev Tools: Skip reviews, Saboteur, Connect all chips
+- [x] Dev Tools вынесен в отдельный компонент, адаптируется под мобайл при открытом плеере
+- [x] AudioPlayerBar, DevTools, ChipGallery — вынесены в отдельные компоненты/папки
+- [x] Hover-эффекты (play-btn, gallery tooltip) только на десктопе (`@media (hover: hover)`)
+- [x] LocatorJS интеграция (dev only): клик на элемент → открытие в редакторе
 
 ## Что НЕ сделано
 - [ ] Бэкенд, БД, персистенция данных
