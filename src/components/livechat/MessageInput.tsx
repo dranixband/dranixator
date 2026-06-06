@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useSendThrottle } from '../../hooks/useSendThrottle';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import EmojiPicker from './EmojiPicker';
 import { AMBER, MONO, MAX_MESSAGE_LEN } from './theme';
 
@@ -11,6 +12,7 @@ export default function MessageInput({ onSend }: Props) {
   const [text, setText] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
   const { canSend, registerSend } = useSendThrottle();
+  const isMobile = useIsMobile();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const submit = () => {
@@ -79,13 +81,14 @@ export default function MessageInput({ onSend }: Props) {
           value={text}
           maxLength={MAX_MESSAGE_LEN}
           placeholder="say something..."
-          autoFocus
+          autoFocus={!isMobile}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKey}
           style={{
             flex: 1,
             fontFamily: MONO,
-            fontSize: 12,
+            // 16px on mobile prevents iOS Safari from auto-zooming on focus.
+            fontSize: isMobile ? 16 : 12,
             color: AMBER,
             background: 'rgba(0,0,0,0.4)',
             border: '1px solid rgba(249,206,15,0.3)',

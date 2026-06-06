@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import AvatarBuilder from './AvatarBuilder';
 import { randomSeed } from '../../lib/avatarGen';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { AMBER, MONO, PANEL_BG, PANEL_SHADOW } from './theme';
 import type { AvatarData, ChatProfile } from './types';
 
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export default function RegistrationModal({ initial, onSave, onClose }: Props) {
+  const isMobile = useIsMobile();
   const [nickname, setNickname] = useState(
     initial && initial.nickname !== 'Anonymous' ? initial.nickname : '',
   );
@@ -104,7 +106,8 @@ export default function RegistrationModal({ initial, onSave, onClose }: Props) {
           onChange={(e) => setNickname(e.target.value)}
           style={{
             fontFamily: MONO,
-            fontSize: 12,
+            // 16px on mobile prevents iOS Safari from auto-zooming on focus.
+            fontSize: isMobile ? 16 : 12,
             color: AMBER,
             background: 'rgba(0,0,0,0.4)',
             border: '1px solid rgba(249,206,15,0.3)',

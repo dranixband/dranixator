@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
@@ -6,11 +6,14 @@ import { MONO, PANEL_BG, PANEL_BORDER, PANEL_SHADOW } from './theme';
 import { useDraggable } from '../../hooks/useDraggable';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useResizable } from '../../hooks/useResizable';
+import { useVisualViewport } from '../../hooks/useVisualViewport';
 import type { ChatMessage, ChatProfile } from './types';
 
 // Desktop sizing (module-level so the useResizable deps stay stable).
 const DESKTOP_DEFAULT_SIZE = { width: 360, height: 560 };
 const DESKTOP_MIN_SIZE = { width: 280, height: 360 };
+// Top-left on desktop. Dev Tools sits bottom-left, so there's no overlap.
+const DESKTOP_DEFAULT_POS = { x: 16, y: 16 };
 
 interface Props {
   profile: ChatProfile;
@@ -31,19 +34,38 @@ export default function ChatWindow({
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
-  const { position, onPointerDown } = useDraggable(ref, { x: 16, y: 16 }, isMobile);
+  const { position, onPointerDown } = useDraggable(ref, DESKTOP_DEFAULT_POS, isMobile);
   const { size, onResizeStart } = useResizable(DESKTOP_DEFAULT_SIZE, {
     min: DESKTOP_MIN_SIZE,
     disabled: isMobile,
     persistKey: 'dranix_chat_size',
   });
+  const vv = useVisualViewport();
+  const [inputFocused, setInputFocused] = useState(false);
+
+  // On mobile, the on-screen keyboard shrinks the usable area. A fixed top:0/70vh
+  // window would leave a gap above the keyboard (Android resizes the layout
+  // viewport) or slide out of view (iOS offsets the visual viewport). When a chat
+  // input is focused, fill the visual viewport exactly so the input sits right
+  // above the keyboard with no gap and the message list stays scrollable.
+  // Focus is more reliable than a height heuristic across iOS and Android.
+  const keyboardOpen = isMobile && !collapsed && inputFocused;
 
   // Layout differs by device + collapsed state.
   let layout: React.CSSProperties;
   if (isMobile) {
-    layout = collapsed
-      ? { top: 8, left: 8, width: 'auto', height: 'auto', borderRadius: 8, border: PANEL_BORDER }
-      : { top: 0, left: 0, width: '100vw', height: '70vh', borderRadius: 0, border: PANEL_BORDER };
+    if (collapsed) {
+      layout = { top: 8, left: 8, width: 'auto', height: 'auto', borderRadius: 8, border: PANEL_BORDER };
+    } else {
+      layout = {
+        top: keyboardOpen ? vv.offsetTop : 0,
+        left: 0,
+        width: '100vw',
+        height: keyboardOpen ? vv.height : '70vh',
+        borderRadius: 0,
+        border: PANEL_BORDER,
+      };
+    }
   } else {
     layout = {
       top: position.y,
@@ -59,14 +81,23 @@ export default function ChatWindow({
   const showResizeGrip = !isMobile && !collapsed;
 
   // Expose the live window height to descendants (the emoji picker sizes to it).
+  const mobileWindowH = keyboardOpen ? `${vv.height}px` : '70vh';
   const cssVars = {
-    '--chat-window-h': isMobile ? '70vh' : `${size.height}px`,
+    '--chat-window-h': isMobile ? mobileWindowH : `${size.height}px`,
   } as React.CSSProperties;
 
   return (
     <div
       ref={ref}
       className="chat-boot-enter"
+      onFocus={(e) => {
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') setInputFocused(true);
+      }}
+      onBlur={(e) => {
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') setInputFocused(false);
+      }}
       style={{
         position: 'fixed',
         ...layout,
