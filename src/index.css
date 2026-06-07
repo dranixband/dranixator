@@ -406,3 +406,24 @@ html, body, #root {
 .chat-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* ── Achievements ── */
+@keyframes ach-toast-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.ach-toast-in { animation: ach-toast-in 240ms ease-out; }
+
+@keyframes ach-current-flow {
+  to { stroke-dashoffset: -16; }
+}
+.ach-trace-lit {
+  stroke-dasharray: 4 4;
+  animation: ach-current-flow 700ms linear infinite;
+}
+
+@keyframes ach-glow-pulse {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(249,206,15,0.3)); }
+  50% { filter: drop-shadow(0 0 10px rgba(249,206,15,0.8)); }
+}
+.ach-powerup { animation: ach-glow-pulse 1.2s ease-in-out infinite; }
