@@ -4,12 +4,17 @@ import RegistrationModal from './RegistrationModal';
 import { useChatProfile, anonymousProfile } from '../../hooks/useChatProfile';
 import { useSimulatedChat } from '../../hooks/useSimulatedChat';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useAchievements } from '../../hooks/useAchievements';
+import { track } from '../../achievements/bus';
 import type { ChatMessage, ChatProfile } from './types';
+
+const containsEmoji = (s: string) => /\p{Extended_Pictographic}/u.test(s);
 
 let ownCounter = 0;
 
 export default function LiveChat() {
   const { profile, setProfile, hasProfile } = useChatProfile();
+  const { rank } = useAchievements();
   const { messages, pushMessage, updateMessage } = useSimulatedChat();
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(isMobile);
@@ -18,6 +23,7 @@ export default function LiveChat() {
 
   const handleSave = (p: ChatProfile) => {
     setProfile(p);
+    track({ kind: 'callsign_set' });
     setShowRegistration(false);
   };
 
@@ -32,14 +38,20 @@ export default function LiveChat() {
     const active = profile ?? anonymousProfile();
     ownCounter += 1;
     const id = `own-${Date.now()}-${ownCounter}`;
+    const showRank = rank.isLegend || rank.index > 0; // Civilian (index 0) shows no badge
     const msg: ChatMessage = {
       id,
-      author: { nickname: active.nickname, avatar: active.avatar },
+      author: {
+        nickname: active.nickname,
+        avatar: active.avatar,
+        ...(showRank ? { rank: rank.rank, rankTier: rank.tier } : {}),
+      },
       text,
       ts: Date.now(),
       isOwn: true,
       status: 'sending',
     };
+    track({ kind: 'chat_message', hasEmoji: containsEmoji(text) });
     pushMessage(msg);
     window.setTimeout(() => updateMessage(id, { status: 'sent' }), 700);
   };
