@@ -1,6 +1,6 @@
 import { useContext } from 'react';
-import { AchievementsContext } from '../achievements/AchievementsProvider';
-import type { AchievementsContextValue } from '../achievements/AchievementsProvider';
+import { AchievementsContext } from '../achievements/achievementsContext';
+import type { AchievementsContextValue } from '../achievements/achievementsContext';
 
 export function useAchievements(): AchievementsContextValue {
   const ctx = useContext(AchievementsContext);

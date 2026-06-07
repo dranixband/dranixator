@@ -1,30 +1,13 @@
-import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { AchievementState, AchievementDef } from './types';
+import type { AchievementState } from './types';
 import { CATALOG } from './catalog';
 import { applyEvent } from './engine';
 import { getRank } from './ranks';
-import type { RankInfo } from './ranks';
 import { subscribe } from './bus';
 import { load, save } from './storage';
-
-export interface ToastItem {
-  key: string; // unique per toast instance
-  def: AchievementDef;
-}
-
-export interface AchievementsContextValue {
-  state: AchievementState;
-  rank: RankInfo;
-  catalog: AchievementDef[];
-  toasts: ToastItem[];
-  dismissToast: (key: string) => void;
-  panelOpen: boolean;
-  openPanel: () => void;
-  closePanel: () => void;
-}
-
-export const AchievementsContext = createContext<AchievementsContextValue | null>(null);
+import { AchievementsContext } from './achievementsContext';
+import type { AchievementsContextValue, ToastItem } from './achievementsContext';
 
 let toastSeq = 0;
 
@@ -33,9 +16,10 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [panelOpen, setPanelOpen] = useState(false);
 
-  // Latest-state ref so the bus handler never closes over a stale value.
+  // Latest-state ref so the long-lived bus handler always reads fresh state and can chain
+  // multiple events fired synchronously in one tick. Updated inside the handler — never
+  // during render (initialized once from the loaded state).
   const stateRef = useRef(state);
-  stateRef.current = state;
 
   useEffect(() => {
     const unsub = subscribe((e) => {
