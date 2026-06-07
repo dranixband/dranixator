@@ -1,5 +1,5 @@
-import type { AchEvent, AchievementState, Stats } from './types';
-import { NODE_TYPES } from './types';
+import type { AchEvent, AchievementState, Stats, AchievementDef, EvalContext } from './types';
+import { NODE_TYPES, TIER_XP } from './types';
 import type { NodeType } from './types';
 
 export function emptyStats(): Stats {
@@ -81,4 +81,75 @@ export function reduce(stats: Stats, e: AchEvent): Stats {
     }
   }
   return s;
+}
+
+/** Pre-tick context. Collection category is excluded to avoid meta self-reference. */
+export function buildContext(
+  catalog: AchievementDef[],
+  unlocked: Record<string, number>,
+): EvalContext {
+  const nonColl = catalog.filter((d) => d.category !== 'collection');
+  const bronze = nonColl.filter((d) => d.tier === 'bronze');
+  return {
+    totalCount: nonColl.length,
+    unlockedCount: nonColl.filter((d) => unlocked[d.id] != null).length,
+    totalBronze: bronze.length,
+    unlockedBronze: bronze.filter((d) => unlocked[d.id] != null).length,
+  };
+}
+
+export interface ApplyResult {
+  state: AchievementState;
+  newlyUnlocked: string[];
+}
+
+/** Pure orchestrator: reduce -> evaluate locked defs -> unlock + add XP. `now` is injected.
+ *
+ * Two-pass evaluation:
+ *   Pass 1 (non-collection): uses pre-tick context. Unlocks are toasted and add XP.
+ *   Pass 2 (collection):     uses post-pass-1 context so collection % sees the current tick's
+ *                            non-collection unlocks. Collection achievements unlock silently
+ *                            (not added to newlyUnlocked, no XP) to avoid meta self-reference.
+ */
+export function applyEvent(
+  state: AchievementState,
+  e: AchEvent,
+  catalog: AchievementDef[],
+  now: number,
+): ApplyResult {
+  const stats = reduce(state.stats, e);
+  const unlocked = { ...state.unlocked };
+  const newlyUnlocked: string[] = [];
+  let xp = state.xp;
+
+  // Pass 1: non-collection defs — pre-tick context, visible unlocks, add XP.
+  const preTickCtx = buildContext(catalog, state.unlocked);
+  for (const def of catalog) {
+    if (def.category === 'collection') continue;
+    if (unlocked[def.id] != null) continue;
+    if (def.condition(stats, preTickCtx)) {
+      unlocked[def.id] = now;
+      xp += def.xp ?? TIER_XP[def.tier];
+      newlyUnlocked.push(def.id);
+    }
+  }
+
+  // Pass 2: collection defs — post-pass-1 context, silent unlocks, no XP.
+  const postCtx = buildContext(catalog, unlocked);
+  for (const def of catalog) {
+    if (def.category !== 'collection') continue;
+    if (unlocked[def.id] != null) continue;
+    if (def.condition(stats, postCtx)) {
+      unlocked[def.id] = now;
+      // intentionally: no XP, not pushed to newlyUnlocked
+    }
+  }
+
+  const finalStats =
+    newlyUnlocked.length > 0 ? { ...stats, panelOpensSinceUnlock: 0 } : stats;
+
+  return {
+    state: { ...state, stats: finalStats, unlocked, xp },
+    newlyUnlocked,
+  };
 }
