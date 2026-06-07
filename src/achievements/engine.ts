@@ -105,11 +105,12 @@ export interface ApplyResult {
 
 /** Pure orchestrator: reduce -> evaluate locked defs -> unlock + add XP. `now` is injected.
  *
- * Two-pass evaluation:
- *   Pass 1 (non-collection): uses pre-tick context. Unlocks are toasted and add XP.
- *   Pass 2 (collection):     uses post-pass-1 context so collection % sees the current tick's
- *                            non-collection unlocks. Collection achievements unlock silently
- *                            (not added to newlyUnlocked, no XP) to avoid meta self-reference.
+ * Fixpoint evaluation: re-run a full pass until nothing new unlocks. Each round recomputes
+ * the context from the CURRENT unlocked set, so a freshly-unlocked non-collection badge can
+ * satisfy a collection % threshold in the SAME tick. Collection achievements are excluded
+ * from the context (see buildContext), so they never count one another → the loop is
+ * guaranteed to terminate in at most `catalog.length` rounds. Every unlock (collection
+ * included) adds XP and is reported in `newlyUnlocked` so the UI can toast it.
  */
 export function applyEvent(
   state: AchievementState,
@@ -122,27 +123,19 @@ export function applyEvent(
   const newlyUnlocked: string[] = [];
   let xp = state.xp;
 
-  // Pass 1: non-collection defs — pre-tick context, visible unlocks, add XP.
-  const preTickCtx = buildContext(catalog, state.unlocked);
-  for (const def of catalog) {
-    if (def.category === 'collection') continue;
-    if (unlocked[def.id] != null) continue;
-    if (def.condition(stats, preTickCtx)) {
-      unlocked[def.id] = now;
-      xp += def.xp ?? TIER_XP[def.tier];
-      newlyUnlocked.push(def.id);
+  for (;;) {
+    const ctx = buildContext(catalog, unlocked);
+    let foundThisRound = false;
+    for (const def of catalog) {
+      if (unlocked[def.id] != null) continue;
+      if (def.condition(stats, ctx)) {
+        unlocked[def.id] = now;
+        xp += def.xp ?? TIER_XP[def.tier];
+        newlyUnlocked.push(def.id);
+        foundThisRound = true;
+      }
     }
-  }
-
-  // Pass 2: collection defs — post-pass-1 context, silent unlocks, no XP.
-  const postCtx = buildContext(catalog, unlocked);
-  for (const def of catalog) {
-    if (def.category !== 'collection') continue;
-    if (unlocked[def.id] != null) continue;
-    if (def.condition(stats, postCtx)) {
-      unlocked[def.id] = now;
-      // intentionally: no XP, not pushed to newlyUnlocked
-    }
+    if (!foundThisRound) break;
   }
 
   const finalStats =

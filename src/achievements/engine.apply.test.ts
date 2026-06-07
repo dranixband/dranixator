@@ -27,28 +27,36 @@ describe('applyEvent', () => {
       FIX,
       1000,
     );
-    expect(newlyUnlocked).toEqual(['a_first']);
+    // a_first unlocks (nodesSolved>=1). Same tick, non-collection unlockedCount=1/2=50% >= 25%,
+    // so the collection badge c_quarter ALSO unlocks — with XP and in newlyUnlocked (fixpoint).
+    expect(newlyUnlocked).toContain('a_first');
+    expect(newlyUnlocked).toContain('c_quarter');
     expect(state.unlocked.a_first).toBe(1000);
-    expect(state.xp).toBe(10); // bronze
+    expect(state.unlocked.c_quarter).toBe(1000);
+    expect(state.xp).toBe(10 + 25); // bronze a_first + silver c_quarter
   });
 
-  it('is idempotent: re-applying does not re-unlock or double XP', () => {
-    let st = defaultState();
-    st = applyEvent(st, { kind: 'node_solved', nodeType: 'riddle' }, FIX, 1).state;
-    const again = applyEvent(st, { kind: 'node_solved', nodeType: 'riddle' }, FIX, 2);
+  it('is idempotent: re-applying does not re-unlock or change XP/timestamps', () => {
+    const first = applyEvent(defaultState(), { kind: 'node_solved', nodeType: 'riddle' }, FIX, 1);
+    const again = applyEvent(first.state, { kind: 'node_solved', nodeType: 'riddle' }, FIX, 2);
     expect(again.newlyUnlocked).toEqual([]);
-    expect(again.state.xp).toBe(10);
+    expect(again.state.xp).toBe(first.state.xp);
     expect(again.state.unlocked.a_first).toBe(1); // original timestamp kept
+    expect(again.state.unlocked.c_quarter).toBe(1);
   });
 
-  it('collection % uses the PRE-tick unlocked count (lags one event)', () => {
-    // Reach 9 nodes: a_first unlocked, a_ten not. ctx before tick = 1/2 = 50% >= 25%.
-    let st = defaultState();
-    for (let i = 0; i < 9; i++) {
-      st = applyEvent(st, { kind: 'node_solved', nodeType: 'riddle' }, FIX, i + 1).state;
-    }
-    expect(!!st.unlocked.a_first).toBe(true);
-    expect(!!st.unlocked.c_quarter).toBe(true); // unlocked on a later tick, not the first
+  it('collection badges unlock same-tick, with XP and in newlyUnlocked (not silent)', () => {
+    // After a_first unlocks, non-collection unlockedCount=1/2=50% >= 25% → c_quarter unlocks
+    // in the SAME applyEvent call (fixpoint), contributing its silver XP and a toast entry.
+    const { state, newlyUnlocked } = applyEvent(
+      defaultState(),
+      { kind: 'node_solved', nodeType: 'riddle' },
+      FIX,
+      7,
+    );
+    expect(newlyUnlocked).toContain('c_quarter');
+    expect(state.unlocked.c_quarter).toBe(7);
+    expect(state.xp).toBe(10 + 25);
   });
 
   it('resets panelOpensSinceUnlock whenever something unlocks', () => {
