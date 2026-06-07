@@ -59,7 +59,7 @@ export default function AchievementPopover({ def, unlockedAt, onClose }: Achieve
           </div>
         )}
         {!unlocked && !def.hidden && (
-          <div style={{ fontSize: 11, marginTop: 8, opacity: 0.6 }}>Locked — {def.description}</div>
+          <div style={{ fontSize: 11, marginTop: 8, opacity: 0.6 }}>🔒 Locked — not yet earned</div>
         )}
       </div>
     </div>
