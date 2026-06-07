@@ -13,6 +13,7 @@ import type { SongLabel } from "../constants/songs";
 import { socket } from "../services/socket";
 import AudioPlayerBar from "./AudioPlayerBar";
 import DevTools from "./DevTools";
+import { track } from '../achievements/bus';
 
 /* ───── Types ───── */
 
@@ -119,6 +120,11 @@ interface PendingGhost {
   audioSrc?: string;
   puzzleImage?: string;
   difficulty: number;
+}
+
+/** First-try is only cheaply derivable from wordScramble attempts (see achievements plan). */
+function reviewFirstTry(review: Review): boolean {
+  return review.type === 'wordScramble' ? review.attempts <= 1 : false;
 }
 
 /** Deterministic node type from grid coordinates (checkerboard pattern) */
@@ -923,6 +929,9 @@ export default function Board() {
     return "Song";
   }, [buildingFromChip, activePathIdx, paths]);
 
+  // Keys "pathIdx:nodeIdx" the LOCAL user destroyed, so a later refill can earn Phoenix.
+  const selfDestroyedRef = useRef<Set<string>>(new Set());
+
   /* ── Review submitted → place the node ── */
   const handleReviewSubmit = useCallback(
     (review: Review) => {
@@ -949,6 +958,13 @@ export default function Board() {
         } else {
           setActivePathIdx(paths.length);
         }
+
+        const nodeTypeSolved = getNodeTypeForPosition(gx, gy);
+        track({ kind: 'node_solved', nodeType: nodeTypeSolved, firstTry: reviewFirstTry(review), hour: new Date().getHours() });
+        if (unlocks) {
+          track({ kind: 'path_completed', pathLength: 1 });
+          track({ kind: 'chip_unlocked', totalChips: SONGS.length });
+        }
       } else if (activePathIdx !== null) {
         const updatedPaths = paths.map((p, i) => {
           if (i !== activePathIdx) return p;
@@ -966,6 +982,14 @@ export default function Board() {
           setRecentlyUnlocked(new Set([unlocks.id]));
           setTimeout(() => setRecentlyUnlocked(new Set()), 1500);
           setActivePathIdx(null);
+        }
+
+        const nodeTypeSolved = getNodeTypeForPosition(gx, gy);
+        const completedLen = paths[activePathIdx].nodes.length + 1;
+        track({ kind: 'node_solved', nodeType: nodeTypeSolved, firstTry: reviewFirstTry(review), hour: new Date().getHours() });
+        if (unlocks) {
+          track({ kind: 'path_completed', pathLength: completedLen });
+          track({ kind: 'chip_unlocked', totalChips: SONGS.length });
         }
       }
 
@@ -986,6 +1010,12 @@ export default function Board() {
         return { ...p, reviews: newReviews };
       });
       socket.emit("paths:update", updatedPaths);
+
+      const key = `${pathIdx}:${nodeIdx}`;
+      const wasSelf = selfDestroyedRef.current.has(key);
+      selfDestroyedRef.current.delete(key);
+      track({ kind: 'node_refilled', wasSelfDestroyed: wasSelf });
+
       setRefillingNode(null);
     },
     [refillingNode, paths],
@@ -1051,6 +1081,7 @@ export default function Board() {
     (pathIdx: number, nodeIdx: number) => {
       setViewingReview(null);
       setDestroyingNode({ pathIdx, nodeIdx });
+      selfDestroyedRef.current.add(`${pathIdx}:${nodeIdx}`);
       setTimeout(() => {
         const updatedPaths = paths.map((p, i) => {
           if (i !== pathIdx) return p;
@@ -1059,6 +1090,8 @@ export default function Board() {
           return { ...p, reviews: newReviews };
         });
         socket.emit("paths:update", updatedPaths);
+        const wiped = updatedPaths[pathIdx].reviews.every((r) => r === null);
+        track({ kind: 'node_sabotaged', pathWiped: wiped });
         setDestroyingNode(null);
       }, 520);
     },
