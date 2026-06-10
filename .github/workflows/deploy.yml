@@ -24,8 +24,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-      - run: npm ci
+      # Workaround for npm optional-deps bug with Rolldown native bindings
+      # (lockfile generated on Windows misses linux-x64-gnu binding).
+      # See: https://github.com/npm/cli/issues/4828
+      - run: rm -f package-lock.json
+      - run: npm install --no-audit --no-fund
       - run: npm run build
         env:
           VITE_SOCKET_URL: ${{ vars.VITE_SOCKET_URL || 'https://dranixatorback-production.up.railway.app' }}
