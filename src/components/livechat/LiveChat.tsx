@@ -1,16 +1,16 @@
-import { useState } from 'react';
-import ChatWindow from './ChatWindow';
-import RegistrationModal from './RegistrationModal';
-import { useChatProfile, anonymousProfile } from '../../hooks/useChatProfile';
-import { useSimulatedChat } from '../../hooks/useSimulatedChat';
-import { useIsMobile } from '../../hooks/useIsMobile';
-import type { ChatMessage, ChatProfile } from './types';
+import { useState } from "react";
+import ChatWindow from "./ChatWindow";
+import RegistrationModal from "./RegistrationModal";
+import { useChatProfile, anonymousProfile } from "../../hooks/useChatProfile";
+import { useChat } from "../../hooks/useChat";
+import { useIsMobile } from "../../hooks/useIsMobile";
+import type { ChatMessage, ChatProfile } from "./types";
 
 let ownCounter = 0;
 
 export default function LiveChat() {
   const { profile, setProfile, hasProfile } = useChatProfile();
-  const { messages, pushMessage, updateMessage } = useSimulatedChat();
+  const { messages, sendMessage } = useChat();
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(isMobile);
   // Auto-open registration on first visit (no stored profile).
@@ -38,21 +38,28 @@ export default function LiveChat() {
       text,
       ts: Date.now(),
       isOwn: true,
-      status: 'sending',
+      status: "sending",
     };
-    pushMessage(msg);
-    window.setTimeout(() => updateMessage(id, { status: 'sent' }), 700);
+    sendMessage(msg);
   };
 
   // Use a working profile for the window even before save (Anonymous preview).
-  const activeProfile = profile ?? { nickname: 'Anonymous', avatar: { type: 'generated', seed: 'guest' } as const };
+  const activeProfile = profile ?? {
+    nickname: "Anonymous",
+    avatar: { type: "generated", seed: "guest" } as const,
+  };
 
   return (
     <>
       {isMobile && !collapsed && (
         <div
           onClick={() => setCollapsed(true)}
-          style={{ position: 'fixed', inset: 0, zIndex: 149, background: 'transparent' }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 149,
+            background: "transparent",
+          }}
         />
       )}
       <ChatWindow
