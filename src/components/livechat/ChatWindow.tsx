@@ -11,6 +11,8 @@ import type { ChatMessage, ChatProfile } from "./types";
 // Desktop sizing (module-level so the useResizable deps stay stable).
 const DESKTOP_DEFAULT_SIZE = { width: 360, height: 560 };
 const DESKTOP_MIN_SIZE = { width: 280, height: 360 };
+// Top-left on desktop. Dev Tools sits bottom-left, so there's no overlap.
+const DESKTOP_DEFAULT_POS = { x: 16, y: 16 };
 
 interface Props {
   profile: ChatProfile;
@@ -33,16 +35,28 @@ export default function ChatWindow({
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
+
   const { position, onPointerDown } = useDraggable(
     ref,
     { x: 16, y: 16 },
     isMobile,
   );
+
   const { size, onResizeStart } = useResizable(DESKTOP_DEFAULT_SIZE, {
     min: DESKTOP_MIN_SIZE,
     disabled: isMobile,
     persistKey: "dranix_chat_size",
   });
+  const vv = useVisualViewport();
+  const [inputFocused, setInputFocused] = useState(false);
+
+  // On mobile, the on-screen keyboard shrinks the usable area. A fixed top:0/70vh
+  // window would leave a gap above the keyboard (Android resizes the layout
+  // viewport) or slide out of view (iOS offsets the visual viewport). When a chat
+  // input is focused, fill the visual viewport exactly so the input sits right
+  // above the keyboard with no gap and the message list stays scrollable.
+  // Focus is more reliable than a height heuristic across iOS and Android.
+  const keyboardOpen = isMobile && !collapsed && inputFocused;
 
   // Layout differs by device + collapsed state.
   let layout: React.CSSProperties;
@@ -79,6 +93,7 @@ export default function ChatWindow({
   const showResizeGrip = !isMobile && !collapsed;
 
   // Expose the live window height to descendants (the emoji picker sizes to it).
+  const mobileWindowH = keyboardOpen ? `${vv.height}px` : '70vh';
   const cssVars = {
     "--chat-window-h": isMobile ? "70vh" : `${size.height}px`,
   } as React.CSSProperties;
@@ -87,6 +102,14 @@ export default function ChatWindow({
     <div
       ref={ref}
       className="chat-boot-enter"
+      onFocus={(e) => {
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') setInputFocused(true);
+      }}
+      onBlur={(e) => {
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') setInputFocused(false);
+      }}
       style={{
         position: "fixed",
         ...layout,

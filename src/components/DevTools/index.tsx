@@ -20,7 +20,7 @@ export default function DevTools({
   const mobileClass = playerOpen ? "fixed bottom-35 left-4" : "fixed bottom-4 left-4";
   return (
     <div
-      className={isMobile ? mobileClass : "fixed top-4 left-4"}
+      className={isMobile ? mobileClass : "fixed bottom-4 left-4"}
       style={{
         zIndex: 100,
         background: "rgba(0,0,0,0.85)",
