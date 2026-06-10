@@ -36,6 +36,8 @@ interface ReviewPopupProps {
   audioSrc?: string;
   puzzleImage?: string;
   difficulty?: number;
+  /** Pre-filled author name. When non-empty the name input is hidden. */
+  defaultName?: string;
   onSubmit: (review: Review) => void;
   onClose: () => void;
   onPlayFragment?: (startTime: number, endTime: number) => void;
@@ -58,11 +60,13 @@ export default function ReviewPopup({
   audioSrc,
   puzzleImage,
   difficulty = 0,
+  defaultName = "",
   onSubmit,
   onClose,
   onPlayFragment,
 }: ReviewPopupProps) {
-  const [name, setName] = useState("");
+  const [name, setName] = useState(defaultName);
+  const hasPresetName = defaultName.trim().length > 0;
   const cardRef = useRef<HTMLDivElement>(null);
 
   // Prompt state
@@ -226,7 +230,21 @@ export default function ReviewPopup({
           break;
       }
     },
-    [name, text, nodeType, isValid, rhythmData, drawingDataUrl, riddleCorrect, puzzleMoves, memoryFlips, wireLines, scrambleAttempts, currentPrompt, onSubmit],
+    [
+      name,
+      text,
+      nodeType,
+      isValid,
+      rhythmData,
+      drawingDataUrl,
+      riddleCorrect,
+      puzzleMoves,
+      memoryFlips,
+      wireLines,
+      scrambleAttempts,
+      currentPrompt,
+      onSubmit,
+    ],
   );
 
   return (
@@ -314,10 +332,22 @@ export default function ReviewPopup({
           </div>
           {(() => {
             const level = Math.round(difficulty * 6);
-            const label = ["Easy", "Easy+", "Medium", "Medium+", "Hard", "Hard+", "Expert"][level];
+            const label = [
+              "Easy",
+              "Easy+",
+              "Medium",
+              "Medium+",
+              "Hard",
+              "Hard+",
+              "Expert",
+            ][level];
             // green(0) → yellow(0.5) → red(1)
-            const r = Math.round(difficulty <= 0.5 ? difficulty * 2 * 255 : 255);
-            const g = Math.round(difficulty <= 0.5 ? 255 : (1 - (difficulty - 0.5) * 2) * 255);
+            const r = Math.round(
+              difficulty <= 0.5 ? difficulty * 2 * 255 : 255,
+            );
+            const g = Math.round(
+              difficulty <= 0.5 ? 255 : (1 - (difficulty - 0.5) * 2) * 255,
+            );
             const color = `rgb(${r},${g},50)`;
             return (
               <div
@@ -348,49 +378,50 @@ export default function ReviewPopup({
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* Name input (shared across all types) */}
-          <div style={{ marginBottom: 14 }}>
-            <label
-              style={{
-                display: "block",
-                fontSize: 11,
-                fontFamily: "monospace",
-                color: "rgba(255,255,255,0.35)",
-                marginBottom: 5,
-                textTransform: "uppercase",
-                letterSpacing: 1,
-              }}
-            >
-              Your name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Anonymous"
-              maxLength={30}
-              style={{
-                width: "100%",
-                padding: "8px 12px",
-                fontSize: 14,
-                fontFamily: "monospace",
-                color: "#e0e0e0",
-                background: "rgba(0,0,0,0.3)",
-                border: "1px solid rgba(34,197,94,0.15)",
-                borderRadius: 6,
-                outline: "none",
-                transition: "border-color 0.2s",
-                boxSizing: "border-box",
-              }}
-              onFocus={(e) =>
-                (e.target.style.borderColor = "rgba(34,197,94,0.4)")
-              }
-              onBlur={(e) =>
-                (e.target.style.borderColor = "rgba(34,197,94,0.15)")
-              }
-            />
-          </div>
-
+          {/* Name input (shared across all types). Hidden when a profile name is already known. */}
+          {!hasPresetName && (
+            <div style={{ marginBottom: 14 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  fontFamily: "monospace",
+                  color: "rgba(255,255,255,0.35)",
+                  marginBottom: 5,
+                  textTransform: "uppercase",
+                  letterSpacing: 1,
+                }}
+              >
+                Your name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Anonymous"
+                maxLength={30}
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  fontSize: 14,
+                  fontFamily: "monospace",
+                  color: "#e0e0e0",
+                  background: "rgba(0,0,0,0.3)",
+                  border: "1px solid rgba(34,197,94,0.15)",
+                  borderRadius: 6,
+                  outline: "none",
+                  transition: "border-color 0.2s",
+                  boxSizing: "border-box",
+                }}
+                onFocus={(e) =>
+                  (e.target.style.borderColor = "rgba(34,197,94,0.4)")
+                }
+                onBlur={(e) =>
+                  (e.target.style.borderColor = "rgba(34,197,94,0.15)")
+                }
+              />
+            </div>
+          )}
           {/* === PROMPT FORM === */}
           {nodeType === "prompt" && (
             <div style={{ marginBottom: 16 }}>
@@ -413,7 +444,9 @@ export default function ReviewPopup({
               <textarea
                 ref={textareaRef}
                 value={text}
-                onChange={(e) => setText(e.target.value.slice(0, MAX_CHARS + 10))}
+                onChange={(e) =>
+                  setText(e.target.value.slice(0, MAX_CHARS + 10))
+                }
                 placeholder="Your answer..."
                 rows={3}
                 style={{
@@ -572,7 +605,10 @@ export default function ReviewPopup({
                 Sliding puzzle
               </label>
               <SlidingPuzzle
-                imageSrc={puzzleImage || "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/misha.png"}
+                imageSrc={
+                  puzzleImage ||
+                  "https://pkghqnvdanjpuipjeain.supabase.co/storage/v1/object/public/images/puzzles/misha.png"
+                }
                 onSolved={(moves) => setPuzzleMoves(moves)}
               />
             </div>
@@ -594,7 +630,10 @@ export default function ReviewPopup({
               >
                 Memory game
               </label>
-              <MemoryGame difficulty={difficulty} onSolved={(flips) => setMemoryFlips(flips)} />
+              <MemoryGame
+                difficulty={difficulty}
+                onSolved={(flips) => setMemoryFlips(flips)}
+              />
             </div>
           )}
 
@@ -614,7 +653,10 @@ export default function ReviewPopup({
               >
                 Wire trace
               </label>
-              <WireTrace difficulty={difficulty} onSolved={(l) => setWireLines(l)} />
+              <WireTrace
+                difficulty={difficulty}
+                onSolved={(l) => setWireLines(l)}
+              />
             </div>
           )}
 
