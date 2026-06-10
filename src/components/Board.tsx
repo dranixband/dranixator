@@ -453,6 +453,23 @@ export default function Board() {
       socket.off("paths:update");
     };
   }, []);
+
+  /* ── Derive unlocked chips from synced paths ──
+     Each path with a `reachedChipId` represents an unlock that other clients
+     (and ourselves after a reload) must replay so chips don't appear locked. */
+  useEffect(() => {
+    setUnlockedChips((prev) => {
+      let changed = false;
+      const next = new Set(prev);
+      for (const p of paths) {
+        if (p.reachedChipId !== undefined && !next.has(p.reachedChipId)) {
+          next.add(p.reachedChipId);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [paths]);
   const [activePathIdx, setActivePathIdx] = useState<number | null>(null);
   const [buildingFromChip, setBuildingFromChip] = useState<number | null>(null);
   const [recentlyUnlocked, setRecentlyUnlocked] = useState<Set<number>>(
@@ -3023,4 +3040,3 @@ function ReviewViewer({
 }
 
 /* ───── Audio Player Bar (fixed bottom) ───── */
-
