@@ -24,13 +24,60 @@ export default function CircuitMap({ catalog, unlocked, onSelectCategory }: Circ
   const cx = W / 2;
   const cy = H / 2;
 
+  const MIN_DIST = 80; // keep nodes clear of the RESISTANCE CORE rect
+
   const nodes = cats.map((cat) => {
-    const x = 60 + seed01(cat, 1) * (W - 120);
-    const y = 30 + seed01(cat, 2) * (H - 60);
+    let x = 60 + seed01(cat, 1) * (W - 120);
+    let y = 30 + seed01(cat, 2) * (H - 60);
+    // push node away from center if too close
+    const dx = x - cx;
+    const dy = y - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < MIN_DIST) {
+      const scale = MIN_DIST / (dist || 1);
+      x = Math.max(40, Math.min(W - 40, cx + dx * scale));
+      y = Math.max(20, Math.min(H - 15, cy + dy * scale));
+    }
     const defs = catalog.filter((d) => d.category === cat);
     const lit = defs.some((d) => unlocked[d.id] != null);
     return { cat, x, y, lit, count: defs.length, got: defs.filter((d) => unlocked[d.id] != null).length };
   });
+
+  // Snap nodes that share the same side of center and are close in x → clean vertical traces
+  const SNAP_X = 30;
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j];
+      const sameSide = (a.x < cx) === (b.x < cx);
+      if (sameSide && Math.abs(a.x - b.x) < SNAP_X) {
+        const snapped = (a.x + b.x) / 2;
+        a.x = snapped;
+        b.x = snapped;
+      }
+    }
+  }
+
+  // Separate nodes that are too close in y (after snapping may end up stacked)
+  const MIN_Y_GAP = 32;
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j];
+      if (Math.abs(a.x - b.x) < SNAP_X && Math.abs(a.y - b.y) < MIN_Y_GAP) {
+        const mid = (a.y + b.y) / 2;
+        const half = MIN_Y_GAP / 2;
+        a.y = Math.max(20, mid - half);
+        b.y = Math.min(H - 15, mid + half);
+      }
+    }
+  }
+
+  // Pin firstSteps x between social and collection
+  const socialNode = nodes.find((n) => n.cat === 'social');
+  const collectionNode = nodes.find((n) => n.cat === 'collection');
+  const firstStepsNode = nodes.find((n) => n.cat === 'firstSteps');
+  if (firstStepsNode && socialNode && collectionNode) {
+    firstStepsNode.x = (socialNode.x + collectionNode.x) / 2;
+  }
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block' }}>
@@ -51,7 +98,7 @@ export default function CircuitMap({ catalog, unlocked, onSelectCategory }: Circ
 
       {/* central RESISTANCE CORE */}
       <rect x={cx - 44} y={cy - 14} width={88} height={28} rx={5} fill="#0c1a12" stroke={TIER_COLOR.gold} strokeWidth={2} />
-      <text x={cx} y={cy + 4} textAnchor="middle" fontFamily="monospace" fontSize={10} fill={TIER_COLOR.gold}>
+      <text x={cx} y={cy + 4} textAnchor="middle" fontFamily="monospace" fontSize={8} fill={TIER_COLOR.gold}>
         RESISTANCE CORE
       </text>
 
@@ -66,7 +113,14 @@ export default function CircuitMap({ catalog, unlocked, onSelectCategory }: Circ
             style={{ cursor: 'pointer' }}
           >
             <circle cx={n.x} cy={n.y} r={6} fill={n.lit ? color : '#0c1a12'} stroke={color} strokeWidth={2} />
-            <text x={n.x} y={n.y - 10} textAnchor="middle" fontFamily="monospace" fontSize={8} fill={color}>
+            <text
+              x={n.x}
+              y={n.y < cy ? n.y - 10 : n.y + 18}
+              textAnchor="middle"
+              fontFamily="monospace"
+              fontSize={8}
+              fill={color}
+            >
               {n.cat} {n.got}/{n.count}
             </text>
           </g>

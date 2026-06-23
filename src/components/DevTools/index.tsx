@@ -17,10 +17,11 @@ export default function DevTools({
   onSaboteurChange,
   onConnectAll,
 }: Props) {
-  const mobileClass = playerOpen ? "fixed bottom-35 left-4" : "fixed bottom-4 left-4";
+  const BASE_POS = "fixed bottom-16 left-4";
+  const mobileClass = playerOpen ? "fixed bottom-35 left-4" : BASE_POS;
   return (
     <div
-      className={isMobile ? mobileClass : "fixed bottom-4 left-4"}
+      className={isMobile ? mobileClass : BASE_POS}
       style={{
         zIndex: 100,
         background: "rgba(0,0,0,0.85)",
