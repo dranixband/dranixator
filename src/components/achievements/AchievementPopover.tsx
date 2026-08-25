@@ -3,6 +3,7 @@ import { TIER_XP } from '../../achievements/types';
 import { MONO, PANEL_BG, PANEL_SHADOW } from '../livechat/theme';
 import { TIER_COLOR } from './tokens';
 import BadgeArt from './badgeArt';
+import { useEscapeToClose } from '../../hooks/useEscapeToClose';
 
 interface AchievementPopoverProps {
   def: AchievementDef;
@@ -16,9 +17,14 @@ export default function AchievementPopover({ def, unlockedAt, onClose }: Achieve
   const color = TIER_COLOR[def.tier];
   const xp = def.xp ?? TIER_XP[def.tier];
 
+  useEscapeToClose(onClose);
+
   return (
     <div
-      onClick={onClose}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
       style={{
         position: 'fixed',
         inset: 0,

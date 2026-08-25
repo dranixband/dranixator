@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { AchievementCategory, AchievementDef } from '../../achievements/types';
 import { useAchievements } from '../../hooks/useAchievements';
+import { useEscapeToClose } from '../../hooks/useEscapeToClose';
 import { track } from '../../achievements/bus';
 import { MONO, AMBER, PANEL_BG, PANEL_BORDER, PANEL_SHADOW } from '../livechat/theme';
 import { TIER_COLOR } from './tokens';
@@ -33,6 +34,8 @@ export default function AchievementsPanel() {
   useEffect(() => {
     if (panelOpen) track({ kind: 'panel_opened' });
   }, [panelOpen]);
+
+  useEscapeToClose(closePanel, panelOpen);
 
   const unlockedCount = Object.keys(state.unlocked).length;
   const total = catalog.length;
