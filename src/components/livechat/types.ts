@@ -5,6 +5,8 @@ export type AvatarData =
 export interface ChatAuthor {
   nickname: string;
   avatar: AvatarData;
+  rank?: string; // present only for the local user (v1)
+  rankTier?: 'bronze' | 'silver' | 'gold' | 'platinum' | 'legend';
 }
 
 export interface ChatProfile {

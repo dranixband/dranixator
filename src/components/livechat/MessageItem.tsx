@@ -2,6 +2,7 @@ import Avatar from './Avatar';
 import { AMBER, MONO } from './theme';
 import { avatarColor } from '../../lib/avatarGen';
 import type { ChatMessage } from './types';
+import RankBadge from '../achievements/RankBadge';
 
 export default function MessageItem({ message }: { message: ChatMessage }) {
   const nameColor =
@@ -18,6 +19,11 @@ export default function MessageItem({ message }: { message: ChatMessage }) {
     >
       <Avatar avatar={message.author.avatar} size={24} />
       <div style={{ minWidth: 0, fontFamily: MONO, fontSize: 12, lineHeight: 1.4 }}>
+        {message.author.rank && (
+          <span style={{ marginRight: 6, verticalAlign: 'middle' }}>
+            <RankBadge rank={message.author.rank} tier={message.author.rankTier} compact />
+          </span>
+        )}
         <span
           style={{
             color: message.isOwn ? AMBER : nameColor,

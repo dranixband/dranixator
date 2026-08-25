@@ -8,7 +8,8 @@
 - Tailwind CSS v4
 - lottie-web (анимированные реакции)
 - @locator/babel-jsx + @locator/runtime — LocatorJS (клик на элемент → открытие в редакторе, только dev)
-- Клиентский state (без бэкенда)
+- **Backend**: отдельный репозиторий `dranixator_back` (Fastify + Socket.IO, TypeScript) — realtime синхронизация путей/нод, чата, реакций, claims. In-memory state + debounced JSON snapshot на диск
+- **Dual-mode sync**: клиент обновляет локальный state оптимистично (сразу, до ответа сервера) и только потом сверяется с сервером через broadcast. Если backend недоступен — доска работает как single player полностью на локальном state, без деградации функциональности
 
 ---
 
@@ -17,6 +18,17 @@
 | Файл/Папка | Назначение |
 |------|-----------|
 | `src/components/Board.tsx` | Главный компонент: сетка, чипы, SVG-провода, ноды, pan/zoom, реакции, вся логика |
+| `src/components/achievements/` | Система достижений: `AchievementsButton`, `AchievementsPanel`, `AchievementCard`, `AchievementPopover`, `AchievementToast(er)`, `CircuitMap`, `RankBadge`, `badgeArt.tsx`, `tokens.ts` |
+| `src/achievements/` | Логика достижений: `catalog.ts` (32 ачивки), `engine.ts` (reduce/apply событий), `ranks.ts` (лестница рангов), `types.ts`, `bus.ts` (`track()` — глобальная шина событий), `storage.ts` (localStorage), `AchievementsProvider.tsx`, `achievementsContext.ts` |
+| `src/components/livechat/` | Живой чат: `LiveChat`, `ChatWindow`, `ChatHeader`, `MessageList/Item`, `MessageInput`, `EmojiPicker`, `RegistrationModal`, `AvatarBuilder`, `Avatar`, `theme.ts`, `types.ts` |
+| `src/hooks/useChat.ts` | Синхронизация сообщений чата через сокет: оптимистичное добавление + reconcile по id через `chat:new`/`chat:history` |
+| `src/hooks/useOnlineCount.ts` | Счётчик пользователей онлайн (`online:update` от сервера) |
+| `src/hooks/useClaims.ts` | "Кто сейчас строит из какого чипа" — сервер как источник истины, race resolved сервером |
+| `src/hooks/useReactions.ts` | Реакции на чипах синхронизируются через сокет (`reactions:update` / `reaction:set`), оптимистичный апдейт |
+| `src/hooks/useEscapeToClose.ts` | Общий "modal stack" — Escape/клик-вне закрывает только самый верхний (most-nested) открытый модал |
+| `src/hooks/useChatProfile.ts` | Профиль чата (nickname + avatar) в localStorage |
+| `src/lib/clientId.ts` | Стабильный per-browser id (localStorage, `crypto.randomUUID()`) — используется для реакций/claims |
+| `src/services/socket.ts` | Socket.IO клиент, `VITE_SOCKET_URL` (`.env` / `.env.example`) |
 | `src/components/AudioPlayerBar/` | Аудиоплеер внизу экрана: play/pause, seek, volume, SubmitHub CTA, streaming иконки |
 | `src/components/AudioPlayerBar/StreamingIcons.tsx` | SVG иконки Spotify / Apple / YouTube Music |
 | `src/components/PlayerControls/SeekBar.tsx` | Переиспользуемый прогресс-бар: hover-кружок, таймкод, preview fill, mouse+touch scrubbing |
@@ -104,6 +116,8 @@ SongGallery {
   samples?: { label: string; src: string }[]
 }
 ```
+
+> Backend хранит `PathData` с дополнительным полем `id` (генерируется сервером, `crypto.randomUUID()`, если не пришёл от клиента) — фронтенд его не использует и не отправляет, полагается на порядок массива при полной замене состояния.
 
 ---
 
@@ -194,6 +208,50 @@ Ghost-ноды показывают иконку типа (?!, пазл, кар�
 - Одна реакция на чип от пользователя (переключение между реакциями)
 - Анимация проигрывается при установке реакции
 - Счётчик отображается рядом с иконкой
+- Синхронизируются через backend (`useReactions`, `reactions:update`/`reaction:set`) — видно реакции других пользователей в реальном времени, идентификация по `clientId` (localStorage)
+
+---
+
+## Live Chat
+
+- Плавающее окно чата (`LiveChat` → `ChatWindow`), draggable + resizable (`useDraggable`, `useResizable`), схлопывается в иконку, адаптируется под мобильную клавиатуру (`useVisualViewport`)
+- **Профиль**: nickname + аватар (сгенерированный по seed или загрученное фото до 2MB) — `RegistrationModal` + `AvatarBuilder`, хранится в localStorage (`useChatProfile`). Первый визит → авто-Anonymous со случайным аватаром
+- **Сообщения**: реальный realtime через Socket.IO (`useChat`) — оптимистичная отправка, reconcile по id через серверный echo (`chat:new`), история подгружается через `chat:history` при подключении
+- Счётчик "online" (`useOnlineCount`) — сколько клиентов подключено к серверу
+- Ранг пользователя (см. «Достижения») отображается бейджем рядом с ником в сообщении (`RankBadge`, кроме Civilian — ранг 0 бейдж не показывает)
+- Emoji picker, лимит частоты отправки (`useSendThrottle`)
+- Трекает события ачивок: `callsign_set` (задан ник), `chat_message` (+ есть ли эмодзи)
+
+---
+
+## Достижения (Achievements)
+
+Полноценная система ачивок, работает полностью на клиенте (не зависит от backend).
+
+- **32 ачивки** в 11 категориях: firstSteps, mastery, volume, paths, sabotage, repair, perfection, social, collection, time, absurd
+- 4 тира: bronze / silver / gold / platinum, каждый даёт очки Ω (10/25/50/100 по умолчанию, можно переопределить в `catalog.ts`)
+- **Ранги** (`ranks.ts`) — лестница из 8 званий по накопленным Ω: Civilian → Recruit → Private → Signalman → Sapper → Sergeant → Veteran → Commander, плюс секретный ранг **Legend** (все чипы + все ачивки разблокированы)
+- **Событийная модель**: `track()` (`src/achievements/bus.ts`) — глобальная шина, вызывается из игровой логики (`Board.tsx`, `LiveChat.tsx`) при событиях (`node_solved`, `path_completed`, `chip_unlocked`, `node_sabotaged`, `node_refilled`, `chat_message`, `panel_opened`, `callsign_set`). `AchievementsProvider` подписывается, прогоняет через `engine.ts` (reduce статистики → apply условий разблокировки), персистит в localStorage (`storage.ts`)
+- **UI**:
+  - `AchievementsButton` — кнопка входа (левый нижний угол), показывает счётчик разблокировано/всего
+  - `AchievementsPanel` — модалка: карта прогресса по категориям (`CircuitMap`, "печатная плата" с dashed-связями), фильтры all/unlocked/locked, секции по категориям, прогресс-бар и Ω/ранг в шапке
+  - `AchievementPopover` — деталка одной ачивки (иконка, тир, описание, дата разблокировки)
+  - `AchievementToaster`/`AchievementToast` — очередь тостов при новой разблокировке (правый верхний угол, авто-dismiss 5s, клик открывает панель)
+  - `badgeArt.tsx` — чистый SVG "IC-chip" бейдж на ачивку; locked → grayscale + 🔒, hidden & locked → `???`
+- **Иерархия модалок**: `useEscapeToClose` — общий стек открытых модалок; Escape (или клик вне) закрывает только самый верхний (most-nested), не всю цепочку разом. Используется в `AchievementPopover` и `AchievementsPanel`
+
+---
+
+## Backend / Realtime sync (dranixator_back)
+
+Отдельный репозиторий, соседний с фронтендом: `../dranixator_back`.
+
+- **Стек**: Fastify (HTTP + `/health`) + Socket.IO (WebSocket), TypeScript, in-memory state с debounced JSON snapshot на диск (`DATA_DIR`, переживает restart процесса, но не полноценная БД)
+- **События**: `path:create`/`path:update`/`paths:update` (пути на доске), `chat:message`/`chat:history`/`chat:new`, `reaction:set`/`reactions:update`, `claim:acquire`/`claim:release`/`claims:update`, `online:update`
+- Сервер — источник истины при множественных клиентах: получив мутацию, валидирует, применяет и broadcast'ит (`io.emit`, включая отправителя) актуальное полное состояние
+- **Локальный dev**: `npm run dev` в `dranixator_back` (порт 3001), фронтенд коннектится через `VITE_SOCKET_URL` (`.env`, см. `.env.example`; по умолчанию `http://localhost:3001`, в проде — Railway)
+- **Single player fallback**: если backend недоступен, каждая мутация (`Board.tsx`: создание/расширение/refill/sabotage пути) применяется к локальному `paths` state оптимистично, до/независимо от `socket.emit`. Раньше `setPaths` вызывался только внутри слушателя `paths:update`, из-за чего без backend новые ноды не появлялись на доске — теперь это единственный источник истины при отсутствии сервера, и просто быстрый local-first апдейт при его наличии
+- Claims/reactions/chat полностью зависят от backend — без него claims всегда пустые (никто никого не блокирует), чат не работает, реакции не синхронизируются между вкладками
 
 ---
 
@@ -229,7 +287,7 @@ Ghost-ноды показывают иконку типа (?!, пазл, кар�
 - **Активный сегмент пути**: цветное свечение + анимация energy flow (animated stroke-dashoffset)
 - **Мёртвый сегмент** (после разрушенной ноды): opacity 0.08, без анимации, без glow
 - **Ноды**: SVG-круги с иконками типа; разрушенные — пунктирный кружок с `+`
-- **Pan/Zoom**: drag для перемещения, scroll для зума к курсору, pinch-zoom на мобильных
+- **Pan/Zoom**: drag для перемещения; wheel-событие с `ctrlKey` (браузеры так репортят pinch на трекпаде) — зум к курсору; wheel без `ctrlKey` (двухпальцевый скролл на трекпаде или обычное колесо мыши) — pan по `deltaX`/`deltaY`, как в Figma/Miro; pinch-zoom на тачскринах через `touchstart`/`touchmove`
 - **Intro**: анимация открытия дверей + zoom-in
 
 ---
@@ -335,10 +393,12 @@ Ghost-ноды показывают иконку типа (?!, пазл, кар�
 ---
 
 ## Git / Deploy
-- Remote: `git@github-personal:dranixband/dranixator.git`
+- Frontend remote: `git@github-personal:dranixband/dranixator.git`
+- Backend: отдельный репозиторий `dranixator_back` (соседняя папка, `../dranixator_back`), деплой на Railway (`dranixatorback-production.up.railway.app`)
 - Локальный git config репо: `user.name = dranixband`, `user.email = dranixband@gmail.com`
 - Глобальный git config (корпоративный): `michael.shiryakov@getmoss.com`
-- Деплой на GitHub Pages под аккаунтом `dranixband`
+- Деплой фронтенда на GitHub Pages под аккаунтом `dranixband`
+- `.env.example` во фронтенде: `VITE_SOCKET_URL` — локально `http://localhost:3001`, в проде — Railway URL
 
 ---
 
@@ -370,13 +430,21 @@ Ghost-ноды показывают иконку типа (?!, пазл, кар�
 - [x] AudioPlayerBar, DevTools, ChipGallery — вынесены в отдельные компоненты/папки
 - [x] Hover-эффекты (play-btn, gallery tooltip) только на десктопе (`@media (hover: hover)`)
 - [x] LocatorJS интеграция (dev only): клик на элемент → открытие в редакторе
+- [x] Backend (`dranixator_back`): Fastify + Socket.IO, in-memory state + JSON snapshot на диск
+- [x] Realtime синхронизация путей/нод между клиентами, с single-player fallback если backend недоступен (оптимистичный local-first апдейт)
+- [x] Live-чат: realtime сообщения, online-счётчик, профиль (ник + аватар), rank-бейджи в сообщениях
+- [x] Реакции на чипах синхронизированы между клиентами через backend
+- [x] Claims — блокировка одновременной постройки из одного чипа двумя пользователями
+- [x] Система достижений: 32 ачивки / 11 категорий / 4 тира / 8 рангов + Legend, circuit-map прогресса, тосты, попап, панель
+- [x] Иерархия модалок (Escape/клик-вне закрывает только самый верхний открытый модал)
+- [x] Pan/zoom на трекпаде различает pinch (`ctrlKey`) и двухпальцевый pan (Figma-style)
 
 ## Что НЕ сделано
-- [ ] Бэкенд, БД, персистенция данных
+- [ ] Персистентная БД (Postgres/Prisma) — сейчас только in-memory + JSON snapshot на диск, не переживает multi-instance scaling
 - [ ] User authentication
-- [ ] Совместная работа (shared state между пользователями)
 - [ ] SEO + link preview meta
 - [ ] Семплы для 8 из 9 песен (только dead заполнен)
 - [ ] Реальные фото/видео/инструменталы в галерее (только 5 тестовых фото для dead)
 - [ ] Puzzle images для 4 песен (rising, effes, pizda, doshik)
 - [ ] Ещё больше мини-игр (quiz, reaction time, Simon Says)
+- [ ] Presence-система (курсоры других пользователей) — есть только online-счётчик и claims, без визуализации курсоров

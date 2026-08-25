@@ -16,6 +16,7 @@ import type { SongLabel } from "../constants/songs";
 import { socket } from "../services/socket";
 import AudioPlayerBar from "./AudioPlayerBar";
 import DevTools from "./DevTools";
+import { track } from '../achievements/bus';
 
 /* ───── Types ───── */
 
@@ -122,6 +123,11 @@ interface PendingGhost {
   audioSrc?: string;
   puzzleImage?: string;
   difficulty: number;
+}
+
+/** First-try is only cheaply derivable from wordScramble attempts (see achievements plan). */
+function reviewFirstTry(review: Review): boolean {
+  return review.type === 'wordScramble' ? review.attempts <= 1 : false;
 }
 
 /** Deterministic node type from grid coordinates (checkerboard pattern) */
@@ -774,6 +780,16 @@ export default function Board() {
       e.preventDefault();
       const container = containerRef.current;
       if (!container) return;
+
+      // Trackpads have no native pinch-gesture event on non-touchscreen
+      // laptops — browsers report a pinch as a wheel event with ctrlKey set.
+      // A plain two-finger drag (no pinch) is a regular wheel event, so it
+      // pans instead, matching Figma/Miro-style canvas navigation.
+      if (!e.ctrlKey) {
+        setView((v) => clampView({ ...v, x: v.x - e.deltaX, y: v.y - e.deltaY }));
+        return;
+      }
+
       const rect = container.getBoundingClientRect();
       const cursorX = e.clientX - rect.left;
       const cursorY = e.clientY - rect.top;
@@ -892,6 +908,7 @@ export default function Board() {
             reachedChipId: unlocks?.id,
             reviews: [review],
           };
+          setPaths((prev) => [...prev, newPath]);
           socket.emit("path:create", newPath);
           setBuildingFromChip(null);
           if (unlocks) {
@@ -912,6 +929,7 @@ export default function Board() {
               ...(unlocks ? { reachedChipId: unlocks.id } : {}),
             };
           });
+          setPaths(updatedPaths);
           socket.emit("paths:update", updatedPaths);
           if (unlocks) {
             setUnlockedChips((prev) => new Set([...prev, unlocks.id]));
@@ -977,6 +995,9 @@ export default function Board() {
     return "Song";
   }, [buildingFromChip, activePathIdx, paths]);
 
+  // Keys "pathIdx:nodeIdx" the LOCAL user destroyed, so a later refill can earn Phoenix.
+  const selfDestroyedRef = useRef<Set<string>>(new Set());
+
   /* ── Review submitted → place the node ── */
   const handleReviewSubmit = useCallback(
     (review: Review) => {
@@ -992,6 +1013,7 @@ export default function Board() {
           reachedChipId: unlocks?.id,
           reviews: [review],
         };
+        setPaths((prev) => [...prev, newPath]);
         socket.emit("path:create", newPath);
         setBuildingFromChip(null);
 
@@ -1003,6 +1025,13 @@ export default function Board() {
         } else {
           setActivePathIdx(paths.length);
         }
+
+        const nodeTypeSolved = getNodeTypeForPosition(gx, gy);
+        track({ kind: 'node_solved', nodeType: nodeTypeSolved, firstTry: reviewFirstTry(review), hour: new Date().getHours() });
+        if (unlocks) {
+          track({ kind: 'path_completed', pathLength: 1 });
+          track({ kind: 'chip_unlocked', totalChips: SONGS.length });
+        }
       } else if (activePathIdx !== null) {
         const updatedPaths = paths.map((p, i) => {
           if (i !== activePathIdx) return p;
@@ -1013,6 +1042,7 @@ export default function Board() {
             ...(unlocks ? { reachedChipId: unlocks.id } : {}),
           };
         });
+        setPaths(updatedPaths);
         socket.emit("paths:update", updatedPaths);
 
         if (unlocks) {
@@ -1020,6 +1050,14 @@ export default function Board() {
           setRecentlyUnlocked(new Set([unlocks.id]));
           setTimeout(() => setRecentlyUnlocked(new Set()), 1500);
           setActivePathIdx(null);
+        }
+
+        const nodeTypeSolved = getNodeTypeForPosition(gx, gy);
+        const completedLen = paths[activePathIdx].nodes.length + 1;
+        track({ kind: 'node_solved', nodeType: nodeTypeSolved, firstTry: reviewFirstTry(review), hour: new Date().getHours() });
+        if (unlocks) {
+          track({ kind: 'path_completed', pathLength: completedLen });
+          track({ kind: 'chip_unlocked', totalChips: SONGS.length });
         }
       }
 
@@ -1039,7 +1077,14 @@ export default function Board() {
         newReviews[nodeIdx] = review;
         return { ...p, reviews: newReviews };
       });
+      setPaths(updatedPaths);
       socket.emit("paths:update", updatedPaths);
+
+      const key = `${pathIdx}:${nodeIdx}`;
+      const wasSelf = selfDestroyedRef.current.has(key);
+      selfDestroyedRef.current.delete(key);
+      track({ kind: 'node_refilled', wasSelfDestroyed: wasSelf });
+
       setRefillingNode(null);
     },
     [refillingNode, paths],
@@ -1105,6 +1150,7 @@ export default function Board() {
     (pathIdx: number, nodeIdx: number) => {
       setViewingReview(null);
       setDestroyingNode({ pathIdx, nodeIdx });
+      selfDestroyedRef.current.add(`${pathIdx}:${nodeIdx}`);
       setTimeout(() => {
         const updatedPaths = paths.map((p, i) => {
           if (i !== pathIdx) return p;
@@ -1112,7 +1158,10 @@ export default function Board() {
           newReviews[nodeIdx] = null;
           return { ...p, reviews: newReviews };
         });
+        setPaths(updatedPaths);
         socket.emit("paths:update", updatedPaths);
+        const wiped = updatedPaths[pathIdx].reviews.every((r) => r === null);
+        track({ kind: 'node_sabotaged', pathWiped: wiped });
         setDestroyingNode(null);
       }, 520);
     },
@@ -1194,7 +1243,9 @@ export default function Board() {
       nodes: pts([80, 160, 240, 320, 400], [80, 160, 240, 320, 400]),
     };
 
-    socket.emit("paths:update", [up, down, left, right, tl, tr, bl, br]);
+    const allPaths = [up, down, left, right, tl, tr, bl, br];
+    setPaths(allPaths);
+    socket.emit("paths:update", allPaths);
     setUnlockedChips(new Set(SONGS.map((s) => s.id)));
     setActivePathIdx(null);
     setBuildingFromChip(null);
@@ -1479,7 +1530,7 @@ export default function Board() {
         }}
       >
         {/* TODO create a better conceptual text */}
-        <div>drag to navigate // scroll to zoom</div>
+        <div>drag or scroll to navigate // pinch to zoom</div>
         <div>click a chip → build path → leave a node</div>
         <div>
           connect all chips to un/L0CK/ the board and r{`[AI]`}se DRANIX
