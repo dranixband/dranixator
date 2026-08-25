@@ -5,6 +5,9 @@ import ReviewPopup from "./ReviewPopup";
 import ChipGallery from "./ChipGallery";
 import { useAudioPlayer } from "../hooks/useAudioPlayer";
 import { useIsMobile } from "../hooks/useIsMobile";
+import { useReactions } from "../hooks/useReactions";
+import { useChatProfile } from "../hooks/useChatProfile";
+import { useClaims, type Claim } from "../hooks/useClaims";
 import chipImg from "../assets/Chip.jpg";
 import dranixLogo from "../assets/Dranix logo.svg";
 import doorLeft from "../assets/door-left.svg";
@@ -459,6 +462,23 @@ export default function Board() {
       socket.off("paths:update");
     };
   }, []);
+
+  /* ── Derive unlocked chips from synced paths ──
+     Each path with a `reachedChipId` represents an unlock that other clients
+     (and ourselves after a reload) must replay so chips don't appear locked. */
+  useEffect(() => {
+    setUnlockedChips((prev) => {
+      let changed = false;
+      const next = new Set(prev);
+      for (const p of paths) {
+        if (p.reachedChipId !== undefined && !next.has(p.reachedChipId)) {
+          next.add(p.reachedChipId);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [paths]);
   const [activePathIdx, setActivePathIdx] = useState<number | null>(null);
   const [buildingFromChip, setBuildingFromChip] = useState<number | null>(null);
   const [recentlyUnlocked, setRecentlyUnlocked] = useState<Set<number>>(
@@ -508,30 +528,61 @@ export default function Board() {
     galleryOpenRef.current = galleryChip !== null;
   }, [galleryChip]);
 
-  // Reactions: per-chip selected reaction for current user + total counts
-  const [chipReactions, setChipReactions] = useState<
-    Record<number, { selected: string | null; counts: Record<string, number> }>
-  >({});
+  // Reactions: synced over websocket; selection persists per browser via clientId.
+  const { getChip: getChipReactions, toggleReaction: handleReaction } =
+    useReactions();
 
-  const handleReaction = useCallback((chipId: number, reactionId: string) => {
-    setChipReactions((prev) => {
-      const chip = prev[chipId] ?? { selected: null, counts: {} };
-      const counts = { ...chip.counts };
+  // Author name to prefill in review forms (uses chat profile nickname if set).
+  const { profile: chatProfile } = useChatProfile();
+  const reviewDefaultName =
+    chatProfile && chatProfile.nickname !== "Anonymous"
+      ? chatProfile.nickname
+      : "";
 
-      // Remove previous selection
-      if (chip.selected) {
-        counts[chip.selected] = Math.max(0, (counts[chip.selected] ?? 0) - 1);
-      }
+  // Claims: who's currently building a node from which chip.
+  // `myClaimNickname` is what's broadcast to other users — we prefer the
+  // chat profile nickname so other users see a familiar name, falling back
+  // to "Anonymous" so the indicator is never empty.
+  const myClaimNickname =
+    chatProfile && chatProfile.nickname.trim().length > 0
+      ? chatProfile.nickname.trim()
+      : "Anonymous";
+  const {
+    claims,
+    acquire: acquireClaim,
+    release: releaseClaim,
+    getOtherClaim,
+  } = useClaims();
 
-      // Toggle: if same reaction clicked again, just deselect
-      const newSelected = chip.selected === reactionId ? null : reactionId;
-      if (newSelected) {
-        counts[newSelected] = (counts[newSelected] ?? 0) + 1;
-      }
+  // The chip the local user is currently "occupying" — either starting a new
+  // path or extending an existing one. We broadcast a claim for it so other
+  // users see who's busy and can't click in on top.
+  const myClaimedChipId =
+    buildingFromChip ??
+    (activePathIdx !== null
+      ? (paths[activePathIdx]?.sourceChipId ?? null)
+      : null);
 
-      return { ...prev, [chipId]: { selected: newSelected, counts } };
-    });
-  }, []);
+  // Acquire on mount/change; release on unmount/change. Re-fires when the
+  // nickname changes too, so other users see an up-to-date label.
+  useEffect(() => {
+    if (myClaimedChipId == null) return;
+    acquireClaim(myClaimedChipId, myClaimNickname);
+    return () => {
+      releaseClaim(myClaimedChipId);
+    };
+  }, [myClaimedChipId, myClaimNickname, acquireClaim, releaseClaim]);
+
+  // Race-loss reset: if the server tells us another user owns the chip we
+  // were trying to build from, drop our optimistic build state immediately.
+  useEffect(() => {
+    if (myClaimedChipId == null) return;
+    const other = getOtherClaim(myClaimedChipId);
+    if (!other) return;
+    setBuildingFromChip(null);
+    setActivePathIdx(null);
+    setPendingGhost(null);
+  }, [claims, myClaimedChipId, getOtherClaim]);
 
   // Occupied cells (all placed nodes)
   const occupied = useMemo(() => {
@@ -815,12 +866,15 @@ export default function Board() {
     (chipId: number) => {
       if (dragMoved.current) return;
       if (!unlockedChips.has(chipId)) return;
+      // Don't steal a chip another user is currently building from. The
+      // indicator above the chip already tells everyone who's busy.
+      if (getOtherClaim(chipId)) return;
 
       // Start building a new path from this chip
       setActivePathIdx(null);
       setBuildingFromChip(chipId);
     },
-    [unlockedChips],
+    [unlockedChips, getOtherClaim],
   );
 
   /* ── Click: ghost node → open review popup ── */
@@ -1185,10 +1239,12 @@ export default function Board() {
       if (dragMoved.current) return;
       const path = paths[pathIdx];
       if (path.reachedChipId !== undefined) return; // completed, can't extend
+      // Same-source-chip claim is held by another user → don't hijack.
+      if (getOtherClaim(path.sourceChipId)) return;
       setBuildingFromChip(null);
       setActivePathIdx(pathIdx);
     },
-    [paths],
+    [paths, getOtherClaim],
   );
 
   return (
@@ -1316,14 +1372,15 @@ export default function Board() {
             recentlyUnlocked={recentlyUnlocked.has(song.id)}
             isBuilding={buildingFromChip === song.id}
             isPlaying={playingChip?.id === song.id && isAudioPlaying}
+            claimedByOther={getOtherClaim(song.id)}
             onClick={() => handleChipClick(song.id)}
             onPlay={() => playAudio(song)}
             onGalleryOpen={() => {
               if (isAudioPlaying) toggleAudioPlayback();
               setGalleryChip(song);
             }}
-            selectedReaction={chipReactions[song.id]?.selected ?? null}
-            reactionCounts={chipReactions[song.id]?.counts ?? {}}
+            selectedReaction={getChipReactions(song.id).selected}
+            reactionCounts={getChipReactions(song.id).counts}
             onReaction={(reactionId) => handleReaction(song.id, reactionId)}
           />
         ))}
@@ -1345,6 +1402,7 @@ export default function Board() {
           audioSrc={pendingGhost.audioSrc}
           puzzleImage={pendingGhost.puzzleImage}
           difficulty={pendingGhost.difficulty}
+          defaultName={reviewDefaultName}
           onSubmit={(review: Review) => handleReviewSubmit(review)}
           onClose={() => setPendingGhost(null)}
           onPlayFragment={(startTime, endTime) => {
@@ -1368,6 +1426,7 @@ export default function Board() {
           audioSrc={refillingNode.audioSrc}
           puzzleImage={refillingNode.puzzleImage}
           difficulty={refillingNode.difficulty}
+          defaultName={reviewDefaultName}
           onSubmit={(review: Review) => handleRefillingSubmit(review)}
           onClose={() => setRefillingNode(null)}
           onPlayFragment={(startTime, endTime) => {
@@ -2401,6 +2460,7 @@ function Chip({
   recentlyUnlocked,
   isBuilding,
   isPlaying,
+  claimedByOther,
   onClick,
   onPlay,
   onGalleryOpen,
@@ -2413,6 +2473,7 @@ function Chip({
   recentlyUnlocked: boolean;
   isBuilding: boolean;
   isPlaying: boolean;
+  claimedByOther: Claim | null;
   onClick: () => void;
   onPlay: () => void;
   onGalleryOpen: () => void;
@@ -2421,6 +2482,7 @@ function Chip({
   onReaction: (reactionId: string) => void;
 }) {
   const size = CHIP_SIZE;
+  const locked = !unlocked || claimedByOther !== null;
 
   return (
     <div
@@ -2434,16 +2496,22 @@ function Chip({
         width: size,
         height: size,
         transform: "translate(-50%, -50%)",
-        cursor: unlocked ? "pointer" : "default",
+        cursor: locked ? "not-allowed" : "pointer",
         zIndex: 10,
         backgroundImage: `url(${chipImg})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
-        boxShadow: unlocked
-          ? "0 0 20px rgba(245,197,66,0.2), 0 0 40px rgba(245,197,66,0.06), inset 0 1px 1px rgba(255,255,255,0.05)"
-          : "inset 0 1px 1px rgba(255,255,255,0.03)",
+        boxShadow: claimedByOther
+          ? "0 0 22px rgba(239,68,68,0.35), 0 0 44px rgba(239,68,68,0.12), inset 0 1px 1px rgba(255,255,255,0.05)"
+          : unlocked
+            ? "0 0 20px rgba(245,197,66,0.2), 0 0 40px rgba(245,197,66,0.06), inset 0 1px 1px rgba(255,255,255,0.05)"
+            : "inset 0 1px 1px rgba(255,255,255,0.03)",
         filter: unlocked ? "none" : "brightness(0.4) grayscale(0.6)",
-        outline: isBuilding ? "2px solid rgba(245,197,66,0.4)" : "none",
+        outline: claimedByOther
+          ? "2px solid rgba(239,68,68,0.55)"
+          : isBuilding
+            ? "2px solid rgba(245,197,66,0.4)"
+            : "none",
         outlineOffset: "3px",
       }}
       onMouseDown={(e) => {
@@ -2557,12 +2625,59 @@ function Chip({
         </div>
       )}
 
-      {unlocked && !isBuilding && (
+      {unlocked && !isBuilding && !claimedByOther && (
         <div
           className="absolute text-[10px] font-semibold animate-ctb-pulse"
           style={{ bottom: "28%", fontFamily: "'Barlow', sans-serif" }}
         >
           CLICK TO BUILD
+        </div>
+      )}
+
+      {unlocked && claimedByOther && (
+        <div
+          className="absolute text-[9px] font-bold uppercase"
+          style={{
+            bottom: "28%",
+            fontFamily: "'Barlow', sans-serif",
+            color: "rgba(127,29,29,0.9)",
+            letterSpacing: 1,
+            textAlign: "center",
+            lineHeight: 1.1,
+          }}
+        >
+          IN USE
+        </div>
+      )}
+
+      {/* Claim badge — shown above the chip when another user is building */}
+      {claimedByOther && (
+        <div
+          className="absolute"
+          style={{
+            top: -28,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background:
+              "linear-gradient(180deg, rgba(239,68,68,0.95) 0%, rgba(185,28,28,0.95) 100%)",
+            color: "#fff",
+            fontFamily: "'Barlow', sans-serif",
+            fontSize: 10,
+            fontWeight: 700,
+            padding: "3px 8px",
+            borderRadius: 6,
+            border: "1px solid rgba(255,255,255,0.2)",
+            boxShadow: "0 4px 10px rgba(0,0,0,0.4)",
+            whiteSpace: "nowrap",
+            pointerEvents: "none",
+            zIndex: 13,
+            maxWidth: 140,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+          title={`${claimedByOther.nickname} is building`}
+        >
+          🔧 {claimedByOther.nickname}
         </div>
       )}
 
@@ -3056,4 +3171,3 @@ function ReviewViewer({
 }
 
 /* ───── Audio Player Bar (fixed bottom) ───── */
-

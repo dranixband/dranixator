@@ -1,12 +1,13 @@
-import { useState } from 'react';
-import ChatWindow from './ChatWindow';
-import RegistrationModal from './RegistrationModal';
-import { useChatProfile, anonymousProfile } from '../../hooks/useChatProfile';
-import { useSimulatedChat } from '../../hooks/useSimulatedChat';
-import { useIsMobile } from '../../hooks/useIsMobile';
-import { useAchievements } from '../../hooks/useAchievements';
-import { track } from '../../achievements/bus';
-import type { ChatMessage, ChatProfile } from './types';
+import { useState } from "react";
+import ChatWindow from "./ChatWindow";
+import RegistrationModal from "./RegistrationModal";
+import { useChatProfile, anonymousProfile } from "../../hooks/useChatProfile";
+import { useChat } from "../../hooks/useChat";
+import { useOnlineCount } from "../../hooks/useOnlineCount";
+import { useIsMobile } from "../../hooks/useIsMobile";
+import { useAchievements } from "../../hooks/useAchievements";
+import { track } from "../../achievements/bus";
+import type { ChatMessage, ChatProfile } from "./types";
 
 const containsEmoji = (s: string) => /\p{Extended_Pictographic}/u.test(s);
 
@@ -15,7 +16,8 @@ let ownCounter = 0;
 export default function LiveChat() {
   const { profile, setProfile, hasProfile } = useChatProfile();
   const { rank } = useAchievements();
-  const { messages, pushMessage, updateMessage } = useSimulatedChat();
+  const { messages, sendMessage } = useChat();
+  const onlineCount = useOnlineCount();
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(isMobile);
   // Auto-open registration on first visit (no stored profile).
@@ -49,27 +51,35 @@ export default function LiveChat() {
       text,
       ts: Date.now(),
       isOwn: true,
-      status: 'sending',
+      status: "sending",
     };
-    track({ kind: 'chat_message', hasEmoji: containsEmoji(text) });
-    pushMessage(msg);
-    window.setTimeout(() => updateMessage(id, { status: 'sent' }), 700);
+    track({ kind: "chat_message", hasEmoji: containsEmoji(text) });
+    sendMessage(msg);
   };
 
   // Use a working profile for the window even before save (Anonymous preview).
-  const activeProfile = profile ?? { nickname: 'Anonymous', avatar: { type: 'generated', seed: 'guest' } as const };
+  const activeProfile = profile ?? {
+    nickname: "Anonymous",
+    avatar: { type: "generated", seed: "guest" } as const,
+  };
 
   return (
     <>
       {isMobile && !collapsed && (
         <div
           onClick={() => setCollapsed(true)}
-          style={{ position: 'fixed', inset: 0, zIndex: 149, background: 'transparent' }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 149,
+            background: "transparent",
+          }}
         />
       )}
       <ChatWindow
         profile={activeProfile}
         messages={messages}
+        onlineCount={onlineCount}
         collapsed={collapsed}
         onToggle={() => setCollapsed((c) => !c)}
         onEditProfile={() => setShowRegistration(true)}
